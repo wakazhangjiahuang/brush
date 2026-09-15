@@ -1,0 +1,24 @@
+{
+  "report_version": "1.0",
+  "date": "2026-09-15",
+  "target": "$brush-creator-studio + wakazhangjiahuang/brush",
+  "status": "REMOTE_RESOLVER_PASS_WITH_LFS_BOUNDARY",
+  "checks": [
+    {"id": "repo_access", "status": "PASS", "evidence": "GitHub connector can read repository metadata and default branch main."},
+    {"id": "manifest_read", "status": "PASS", "evidence": "KB-MANIFEST.json readable from main."},
+    {"id": "manifest_entrypoints", "status": "PASS", "evidence": "ARTIST-PROFILE.json, PROCESS-REGISTRY.json, BRUSH-REGISTRY.json and RUNTIME-CONTRACT.md are readable."},
+    {"id": "process_assets", "status": "PASS", "evidence": "Cartoon and vintage process directories contain indexed JPG/PNG/MP4 assets."},
+    {"id": "single_brush_inventory", "status": "PASS", "evidence": "Individual .brush paths are indexed; a direct binary/base64 read of 笔刷/卡通笔刷-单/技术笔.brush succeeded."},
+    {"id": "brushset_lfs_detection", "status": "PASS", "evidence": "The preferred cartoon brushset resolves to a Git LFS pointer with matching SHA-256 and declared size."},
+    {"id": "brushset_native_binary_via_standard_git_read", "status": "LIMITED", "evidence": "Standard Git contents/blob access exposes the LFS pointer, not the .brushset native bytes. Do not claim native set inspection from pointer data."},
+    {"id": "remote_skill_contract", "status": "PATCHED_IN_REPOSITORY", "evidence": "skill-patch/REMOTE-RESOLVER-PATCH.md and knowledge/RUNTIME-CONTRACT.md define the GitHub resolver behavior that must be present in the installed Skill."},
+    {"id": "target_software_import_test", "status": "NOT_RUN", "evidence": "No real Procreate/Photoshop import or drawing validation was executed in this audit."}
+  ],
+  "pass_definition": {
+    "repository_resolver": "PASS",
+    "individual_brush_remote_access": "PASS",
+    "full_brushset_binary_introspection": "LIMITED_BY_GIT_LFS_PATH",
+    "native_software_brush_validation": "NOT_RUN"
+  },
+  "required_skill_behavior": "Installed $brush-creator-studio must apply the remote resolver patch or explicitly follow START-PROMPT.md. Without that resolver instruction, V1.0.0 should not be assumed to auto-call this repository."
+}
