@@ -1,6 +1,6 @@
 # $brush-creator-studio Remote Runtime Contract
 
-Version: 1.2 remote-resolver + delivery-template contract  
+Version: 1.3 remote-resolver + delivery-template + quantity-decision-gate contract  
 Repository: `wakazhangjiahuang/brush`  
 Default branch: `main`
 
@@ -20,15 +20,18 @@ This repository is the persistent source of reusable brush assets, illustrator w
 3. Route the current artwork to the most relevant workflow branch (`cartoon` or `vintage`) using visual/process evidence. Explicit user routing overrides automatic routing.
 4. Inspect only the relevant process media and candidate brush assets needed for the task. Do not load every binary by default.
 5. Build or update a shared `Artist Profile + Brush DNA` for the task. This remains the single source of truth for Mode A / Mode B / Mode AB.
-6. Perform Process DNA and Brush Function Clustering before deciding brush quantity. Brush count is an output of the analysis, never a preset.
-7. Perform gap analysis against existing repository brushes:
+6. Perform `Process DNA → Brush Function Clustering → Required Function Coverage Matrix` before deciding brush quantity.
+7. Perform Existing Brush Matching against the relevant repository candidates. A filename/purpose hint is discovery evidence only; it is not proof of native behavior.
+8. Validate candidate coverage as far as the available native evidence permits, then classify each resolved functional slot as:
    - KEEP: existing brush is sufficient;
    - ADJUST: existing brush is a plausible base but requires parameter tuning;
-   - DERIVE: create a related brush variant from a verified base;
-   - NEW: no suitable base exists, design a new brush specification.
-   If an existing brush covers a required functional slot, do not create a redundant new brush.
-8. Generate the requested native brush output and the required operation-workflow workbook.
-9. Run QA and clearly distinguish verified software results from design/mapping recommendations.
+   - DERIVE: create a related brush variant from a verified/usable base;
+   - NEW: no suitable existing candidate can cover the functional slot after relevant candidates have been checked.
+   A candidate whose behavior is not yet validated must be marked `PENDING_VALIDATION`; it must not be converted directly to `NEW` merely because verification is unavailable.
+9. Run Merge / Redundancy Check. If two functional slots can be covered by one brush without materially compromising the required workflow, merge them.
+10. Pass the Quantity Decision Hard Gate, then determine the final brush quantity.
+11. Generate the requested native brush output and the required operation-workflow workbook.
+12. Run QA and clearly distinguish verified software results from design/mapping recommendations.
 
 ## Mode contract
 
@@ -53,20 +56,60 @@ The workbook must map the final delivered brush names to actual painting stages.
 
 ## Dynamic brush quantity rule
 
-Do not preset the number of brushes.
+Do not preset the number of brushes, a minimum target, a preferred range, or a fixed family size.
 
 Required sequence:
 
-`Process DNA → Brush Function Clustering → Existing Brush Matching → KEEP / ADJUST / DERIVE / NEW → Dynamic Quantity Decision`
+`Process DNA → Brush Function Clustering → Required Function Coverage Matrix → Existing Brush Matching → Existing Brush Validation → KEEP / ADJUST / DERIVE / NEW → Merge / Redundancy Check → Dynamic Quantity Decision`
 
 For every final brush, record:
 - functional slot;
 - painting task(s);
 - why the brush is necessary;
+- relevant existing candidate(s);
+- whether existing candidates cover the requirement;
 - whether it can be merged with another brush;
-- KEEP / ADJUST / DERIVE / NEW classification.
+- KEEP / ADJUST / DERIVE / NEW classification;
+- evidence state.
 
 If necessity cannot be demonstrated, do not include the brush in the final set.
+
+The final count may be zero or any positive number. The count must be the consequence of the coverage analysis, not a design target.
+
+## Quantity Decision Hard Gate
+
+This gate is mandatory and cannot be skipped.
+
+Before labeling any brush quantity as final, all of the following must be true:
+
+1. `Process DNA` is complete enough to identify the actual painting stages required by the current artwork.
+2. `Brush Function Clustering` is complete and each distinct functional slot is documented.
+3. A `Required Function Coverage Matrix` maps every functional slot to relevant repository candidates or explicitly records that no candidate exists.
+4. Relevant Existing Brush candidates have been inspected/validated to the extent technically available.
+5. A candidate that exists but is not behavior-validated is marked `PENDING_VALIDATION`, not automatically `NEW`.
+6. `NEW` is allowed only after the relevant existing candidates have been checked and none can reasonably cover the slot without unacceptable compromise.
+7. Merge / Redundancy Check has been completed so one brush is not duplicated across equivalent functional slots.
+8. No unresolved repository asset remains that could materially change KEEP / ADJUST / DERIVE / NEW classification or the total count.
+
+Quantity state rules:
+
+- `PROVISIONAL_COUNT` — a working count produced before the hard gate closes.
+- `FINAL_COUNT` — allowed only after every hard-gate condition above is satisfied.
+- `QUANTITY_DECISION_BLOCKED` — use when a missing/unreadable native asset prevents a reliable final count.
+
+If a key `.brush` / `.brushset` candidate is unavailable, inaccessible through the current binary path, or only represented by an LFS pointer while its internal brush behavior could materially change the decision, do not claim `FINAL_COUNT`. Use `PROVISIONAL_COUNT` or `QUANTITY_DECISION_BLOCKED` and identify the unresolved asset.
+
+A provisional quantity must never be described to the user as the final dynamically determined quantity.
+
+## Existing Brush state rule
+
+The discovery and classification states are separate:
+
+- `MATCH_FOUND` — a relevant existing candidate was found.
+- `PENDING_VALIDATION` — the candidate exists, but its native behavior/parameters are not sufficiently validated.
+- `KEEP / ADJUST / DERIVE / NEW` — final decision states after sufficient coverage analysis.
+
+`UNVERIFIED` or `PENDING_VALIDATION` is not evidence that a brush must be recreated. Lack of validation alone must never trigger `NEW`.
 
 ## Evidence hierarchy
 
@@ -81,6 +124,8 @@ Filename-derived hints are not equivalent to validated brush behavior.
 ## Git LFS rule
 
 Repository `.brushset` files are managed by Git LFS. A normal Git blob fetch may return a small LFS pointer containing an object id and size rather than the actual `.brushset` bytes. Do not mistake the pointer for a corrupt brushset. The runtime should use the repository/LFS-aware file path when the binary itself is required.
+
+If an LFS-managed `.brushset` is a relevant candidate for the current Function Coverage Matrix but its actual native contents cannot be inspected, mark the candidate `PENDING_VALIDATION`. If that unresolved set could materially change the final quantity, the quantity state must remain `PROVISIONAL_COUNT` or `QUANTITY_DECISION_BLOCKED`.
 
 ## Non-fabrication rule
 
@@ -114,6 +159,11 @@ If GitHub access fails, the manifest is missing, a registry path is invalid, or 
 - do not silently invent replacement repository facts;
 - continue only from explicit local inputs when that is sufficient.
 
+If a relevant native candidate cannot be resolved and this prevents the Quantity Decision Hard Gate from closing:
+- mark the unresolved candidate `PENDING_VALIDATION`;
+- use `PROVISIONAL_COUNT` or `QUANTITY_DECISION_BLOCKED`;
+- do not mislabel a provisional package as a final optimized brush set.
+
 If the operation-workflow template is unavailable, the ZIP may still contain native brush files, but the delivery must be marked `DELIVERY_TEMPLATE_MISSING` and cannot be reported as a complete Mode B acceptance package.
 
 ## Completion gates
@@ -127,7 +177,15 @@ A repository-resolver run is `PASS` only when:
 - LFS pointers are recognized correctly;
 - no brush parameter or software test is presented as verified without evidence.
 
+A Quantity Decision is `FINAL_COUNT` only when:
+- the Required Function Coverage Matrix is complete;
+- relevant existing candidates are resolved enough for a defensible coverage decision;
+- no material `PENDING_VALIDATION` candidate remains;
+- KEEP / ADJUST / DERIVE / NEW classification is complete;
+- Merge / Redundancy Check is complete.
+
 A Mode B delivery package is `PACKAGE PASS` only when:
+- the Quantity Decision Hard Gate has closed with `FINAL_COUNT`;
 - native `.brush/.brushset` outputs required by the task are present;
 - the project-specific Procreate drawing-operation XLSX is present;
 - the XLSX references only delivered brush names and stages;
