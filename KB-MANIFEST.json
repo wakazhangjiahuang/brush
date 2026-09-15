@@ -28,11 +28,13 @@
   "routing": {
     "cartoon": {
       "process_id": "process-cartoon-01",
-      "brush_family_ids": ["cartoon-single", "cartoon-set"]
+      "brush_family_ids": ["cartoon-single", "brushsets"],
+      "preferred_brushset": "笔刷/套装笔刷/水彩18支——卡通插画.brushset"
     },
     "vintage": {
       "process_id": "process-vintage-01",
-      "brush_family_ids": ["vintage-single", "vintage-set"]
+      "brush_family_ids": ["vintage-single", "brushsets"],
+      "preferred_brushset": "笔刷/套装笔刷/田心水彩笔刷59支——复古类 1.brushset"
     }
   }
 }
