@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "kb_id": "brush-creator-studio-kb",
+  "repository": "wakazhangjiahuang/brush",
+  "default_branch": "main",
+  "purpose": "Remote knowledge and asset registry for $brush-creator-studio",
+  "verified_date": "2026-09-15",
+  "entrypoints": {
+    "artist_profile": "knowledge/ARTIST-PROFILE.json",
+    "brush_registry": "knowledge/BRUSH-REGISTRY.json",
+    "process_registry": "knowledge/PROCESS-REGISTRY.json",
+    "runtime_contract": "knowledge/RUNTIME-CONTRACT.md"
+  },
+  "source_directories": {
+    "artist_process": "插画师/",
+    "brush_assets": "笔刷/"
+  },
+  "resolver_policy": [
+    "Always read KB-MANIFEST.json first.",
+    "Resolve exact repository paths from registries; do not guess asset paths.",
+    "User-provided current artwork is the primary project evidence; repository data is reusable workflow and brush evidence.",
+    "Do not infer or invent Procreate brush parameters from filenames alone.",
+    "Treat .brushset files as Git LFS assets; a Git blob may be an LFS pointer rather than the brushset binary.",
+    "Only label parameters or brush behavior as verified when supported by extracted evidence or real software testing.",
+    "Do not require the user to repeatedly upload artist/process/brush data already present in this repository.",
+    "If the repository or manifest cannot be read, report KB_UNAVAILABLE and continue only with explicitly provided local inputs."
+  ],
+  "routing": {
+    "cartoon": {
+      "process_id": "process-cartoon-01",
+      "brush_family_ids": ["cartoon-single", "cartoon-set"]
+    },
+    "vintage": {
+      "process_id": "process-vintage-01",
+      "brush_family_ids": ["vintage-single", "vintage-set"]
+    }
+  }
+}
