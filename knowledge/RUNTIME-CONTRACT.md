@@ -1,12 +1,12 @@
 # $brush-creator-studio Remote Runtime Contract
 
-Version: 1.1 remote-resolver contract  
+Version: 1.2 remote-resolver + delivery-template contract  
 Repository: `wakazhangjiahuang/brush`  
 Default branch: `main`
 
 ## Purpose
 
-This repository is the persistent source of reusable brush assets, illustrator workflow evidence, and machine-readable indexes for `$brush-creator-studio`. The user should not need to re-upload repository-resident brush libraries or illustrator workflow media on every run.
+This repository is the persistent source of reusable brush assets, illustrator workflow evidence, machine-readable indexes, and delivery/acceptance templates for `$brush-creator-studio`. The user should not need to re-upload repository-resident brush libraries, illustrator workflow media, technical profiles, or registered delivery templates on every run.
 
 ## Required runtime sequence
 
@@ -15,22 +15,58 @@ This repository is the persistent source of reusable brush assets, illustrator w
    - read `KB-MANIFEST.json`;
    - read `knowledge/ARTIST-PROFILE.json`;
    - read `knowledge/PROCESS-REGISTRY.json`;
-   - read `knowledge/BRUSH-REGISTRY.json`.
+   - read `knowledge/BRUSH-REGISTRY.json`;
+   - read the registered delivery template when the selected mode requires it.
 3. Route the current artwork to the most relevant workflow branch (`cartoon` or `vintage`) using visual/process evidence. Explicit user routing overrides automatic routing.
 4. Inspect only the relevant process media and candidate brush assets needed for the task. Do not load every binary by default.
 5. Build or update a shared `Artist Profile + Brush DNA` for the task. This remains the single source of truth for Mode A / Mode B / Mode AB.
-6. Perform gap analysis against existing repository brushes:
+6. Perform Process DNA and Brush Function Clustering before deciding brush quantity. Brush count is an output of the analysis, never a preset.
+7. Perform gap analysis against existing repository brushes:
    - KEEP: existing brush is sufficient;
    - ADJUST: existing brush is a plausible base but requires parameter tuning;
    - DERIVE: create a related brush variant from a verified base;
    - NEW: no suitable base exists, design a new brush specification.
-7. Generate the requested output package and clearly distinguish verified software results from design/mapping recommendations.
+   If an existing brush covers a required functional slot, do not create a redundant new brush.
+8. Generate the requested native brush output and the required operation-workflow workbook.
+9. Run QA and clearly distinguish verified software results from design/mapping recommendations.
 
 ## Mode contract
 
 - Mode A = Photoshop / `.abr`
 - Mode B = Procreate / `.brush` and `.brushset`
 - Mode AB = shared Artist Profile + Brush DNA, then software-specific mapping and validation branches
+
+## Mode B mandatory delivery contract
+
+A Mode B ZIP is not considered complete unless it contains:
+
+1. One or more actual Procreate native `.brush` files when individual brushes are part of the delivery.
+2. A `.brushset` containing the delivered brush family when a grouped set is requested or appropriate.
+3. A project-specific `Procreate 新笔刷绘画操作流程.xlsx` workbook generated from the registered acceptance template:
+   `templates/Procreate/柔彩小熊原稿｜Procreate 新笔刷绘画操作流程.xlsx`.
+
+The XLSX must preserve the template's structural logic and visual hierarchy while replacing project-specific content. Its core columns are:
+
+`序号` / `步骤次序` / `具体步骤` / `操作说明` / `技巧` / `使用笔刷` / `设置与控制` / `完成标准`
+
+The workbook must map the final delivered brush names to actual painting stages. It must not reference placeholder brush IDs that were not delivered.
+
+## Dynamic brush quantity rule
+
+Do not preset the number of brushes.
+
+Required sequence:
+
+`Process DNA → Brush Function Clustering → Existing Brush Matching → KEEP / ADJUST / DERIVE / NEW → Dynamic Quantity Decision`
+
+For every final brush, record:
+- functional slot;
+- painting task(s);
+- why the brush is necessary;
+- whether it can be merged with another brush;
+- KEEP / ADJUST / DERIVE / NEW classification.
+
+If necessity cannot be demonstrated, do not include the brush in the final set.
 
 ## Evidence hierarchy
 
@@ -48,7 +84,18 @@ Repository `.brushset` files are managed by Git LFS. A normal Git blob fetch may
 
 ## Non-fabrication rule
 
-Never invent Procreate or Photoshop parameters, dynamics, pressure curves, grain values, blend modes, or import-test results. A parameter can be labeled `VERIFIED` only when supported by actual extraction or real software validation. Otherwise use `PROPOSED`, `INFERRED`, or `UNVERIFIED`.
+Never invent Procreate or Photoshop parameters, dynamics, pressure curves, grain values, blend modes, drawing habits, or import-test results. A parameter can be labeled `VERIFIED` only when supported by actual extraction or real software validation. Otherwise use `PROPOSED`, `INFERRED`, or `UNVERIFIED`.
+
+## Native-output rule
+
+Do not create fake `.brush`, `.brushset`, or `.abr` files by renaming extensions.
+
+If native output cannot be generated, mark the corresponding state clearly:
+- `NATIVE_OUTPUT_MISSING`
+- `NATIVE_BUILD_FAILED`
+- `NATIVE_VALIDATION_NOT_RUN`
+
+Parameter mappings may be included as supplemental material, but they never substitute for required native output.
 
 ## User convenience contract
 
@@ -56,25 +103,34 @@ For a normal repeat run, the intended user interaction is:
 
 `上传当前插画原稿 + 调用 $brush-creator-studio + 指定模式（若未指定则由任务判断）`
 
-The runtime must not ask the user to upload the existing repository brush library, illustrator workflow recordings, or technical profile again unless a required remote asset is actually unavailable.
+The runtime must not ask the user to upload the existing repository brush library, illustrator workflow recordings, technical profile, or registered operation-workflow template again unless a required remote asset is actually unavailable.
 
 ## Fail-safe behavior
 
-If GitHub access fails, the manifest is missing, or a registry path is invalid:
+If GitHub access fails, the manifest is missing, a registry path is invalid, or the registered delivery template cannot be read:
 
-- set state to `KB_UNAVAILABLE` or `KB_INCOMPLETE`;
+- set state to `KB_UNAVAILABLE`, `KB_INCOMPLETE`, or `KB_READ_FAILED`;
 - identify the exact missing path;
 - do not silently invent replacement repository facts;
 - continue only from explicit local inputs when that is sufficient.
+
+If the operation-workflow template is unavailable, the ZIP may still contain native brush files, but the delivery must be marked `DELIVERY_TEMPLATE_MISSING` and cannot be reported as a complete Mode B acceptance package.
 
 ## Completion gates
 
 A repository-resolver run is `PASS` only when:
 
 - `KB-MANIFEST.json` is readable;
-- all manifest entrypoints are readable;
+- all required manifest entrypoints are readable;
 - selected registry paths resolve to existing repository assets;
+- the Mode B delivery template resolves when Mode B is selected;
 - LFS pointers are recognized correctly;
 - no brush parameter or software test is presented as verified without evidence.
+
+A Mode B delivery package is `PACKAGE PASS` only when:
+- native `.brush/.brushset` outputs required by the task are present;
+- the project-specific Procreate drawing-operation XLSX is present;
+- the XLSX references only delivered brush names and stages;
+- native-format structure checks have passed where technically possible.
 
 A final native-brush generation run is `FULL PASS` only after the relevant `.brush/.brushset/.abr` has also been imported/tested in the target software or an equivalent validated native workflow has been executed.
