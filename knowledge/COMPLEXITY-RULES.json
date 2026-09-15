@@ -1,0 +1,24 @@
+{
+  "schema_version": "2.0",
+  "quantity_is_target": false,
+  "purpose": "Sanity bands for undercoverage review only",
+  "bands": [
+    {"id":"minimal","description":"minimal icon / simple spot art","typical_role_band":"2-5"},
+    {"id":"simple_character","description":"simple single-character illustration","typical_role_band":"5-8"},
+    {"id":"complete_character","description":"complete single-character illustration","typical_role_band":"7-12"},
+    {"id":"multi_material","description":"multi-character / multi-material illustration","typical_role_band":"8-16"},
+    {"id":"multi_fur_clothing","description":"multi-character + fur + clothing + texture","typical_role_band":"10-18"},
+    {"id":"scene","description":"complete scene illustration","typical_role_band":"12-24+"}
+  ],
+  "review_triggers": [
+    "normal_complete_illustration_final_roles_lt_8",
+    "required_stage_without_role",
+    "visible_material_without_role",
+    "single_brush_covers_gt_4_materially_different_roles",
+    "base_fill_and_precision_line_merged_without_workflow_evidence",
+    "wet_and_dry_media_merged_without_equivalence_evidence",
+    "fur_and_smooth_fabric_or_decorative_line_merged_without_specialization_justification",
+    "complex_scene_or_multi_subject_returns_unusually_small_set"
+  ],
+  "trigger_result": "UNDERCOVERAGE_REVIEW_REQUIRED"
+}

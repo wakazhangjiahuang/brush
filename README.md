@@ -1,24 +1,32 @@
-# brush
+# brush — $brush-creator-studio V2.0.0 远程知识库
 
-`$brush-creator-studio` 远程笔刷 / 插画师流程知识库。
+本仓库是 `$brush-creator-studio` 的 canonical remote knowledge base。V2 的核心目标从“尽量减少笔刷数量”升级为 **Minimal Complete Production Set（最小完整生产笔刷集合）**：完整覆盖实际生产工序、对象/材质与专业笔刷行为，同时删除真正冗余。
 
-## 目录
+## V2 关键入口
+- `SKILL.md`：与安装包高度一致的 canonical V2 规则。
+- `KB-MANIFEST.json`：运行时入口与精确路径。
+- `START-PROMPT.md`：推荐启动 Prompt。
+- `knowledge/PROCESS-STAGE-TAXONOMY.json`：完整生产工序审计。
+- `knowledge/MATERIAL-TAXONOMY.json`：对象/材质覆盖。
+- `knowledge/COMPLEXITY-RULES.json`：复杂度与欠覆盖复核。
+- `knowledge/MERGE-GATE.md`：禁止“能画=应该合并”的多维 Merge Gate。
+- `knowledge/BRUSH-CAPABILITY-REGISTRY.json`：仅保存真实 native metadata / 软件验证能力证据。
+- `process-dna/`：卡通/复古基础 Process DNA。
+- `templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx`：V2 有效工作流模板。
 
-- `KB-MANIFEST.json`：Skill 远程解析入口，运行时优先读取。
-- `knowledge/ARTIST-PROFILE.json`：插画师技术工作流档案（不存储或推断不必要的个人身份信息）。
-- `knowledge/PROCESS-REGISTRY.json`：卡通 / 复古绘画过程素材索引。
-- `knowledge/BRUSH-REGISTRY.json`：`.brush` / `.brushset` 笔刷资产索引。
-- `knowledge/RUNTIME-CONTRACT.md`：`$brush-creator-studio` GitHub Resolver 运行合同。
-- `插画师/`：卡通、复古录播与过程证据。
-- `笔刷/`：卡通单笔刷、复古单笔刷、套装笔刷。
+## Mode B 原生交付硬约束
+Procreate ZIP 必须实际包含：
+1. 全部最终交付 `.brush`；
+2. 1 个包含完整最终家族的 `.brushset`；
+3. 项目专属 XLSX。
 
-## 正常调用方式
+缺任一项不得标记 `PACKAGE PASS`。参数映射、说明文档或改扩展名文件不能替代原生笔刷。
 
-用户通常只需要提供当前插画原稿，并调用 `$brush-creator-studio`。Skill 应先读取 `KB-MANIFEST.json`，再按索引选择对应的插画师流程和笔刷候选；仓库已经存在的笔刷和流程资料不应要求用户重复上传。
+## 数量规则
+数量仍然动态产生，但不允许过度合并。正常完整插画若最终 Brush Role 少于 8 个，默认触发 `UNDERCOVERAGE_REVIEW_REQUIRED`，除非能证明项目确属极简且工序/材质 100% 覆盖。复杂多角色、多材质、毛发、服饰或场景应执行更严格检查。
 
-## 重要边界
-
-- `.brushset` 使用 Git LFS 管理；Git API 返回约 133B 的对象时通常是 LFS pointer，不代表原文件损坏。
-- 文件名只能作为笔刷用途的候选提示，不能据此虚构 Procreate / Photoshop 参数。
-- 未经过实际软件导入、绘制或原生验证的参数与行为必须标记为 `PROPOSED / INFERRED / UNVERIFIED`。
-- 原生 `.brush/.brushset/.abr` 只有完成目标软件验证后才可标记为 `FULL PASS`。
+## 真实性边界
+- 文件名 / purpose_hint 仅用于发现候选；
+- Git LFS pointer 不是 `.brushset` 原生内容；
+- 未经过真实导入/绘制验证不得声称 FULL PASS；
+- 严格区分 `VERIFIED / VERIFIED_METADATA / INFERRED / PROPOSED / UNVERIFIED`。

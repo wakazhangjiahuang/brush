@@ -1,0 +1,28 @@
+{
+  "schema_version": "2.0",
+  "purpose": "Full production-stage audit before brush-role clustering",
+  "states": ["REQUIRED", "OPTIONAL", "NOT_APPLICABLE"],
+  "stages": [
+    {"id":"P01","label":"Concept / Sketch","role_examples":["construction-sketch"]},
+    {"id":"P02","label":"Construction / Shape Blocking","role_examples":["construction-line","shape-block"]},
+    {"id":"P03","label":"Primary Lineart","role_examples":["primary-line"]},
+    {"id":"P04","label":"Secondary / Detail Line","role_examples":["detail-line","facial-detail-line"]},
+    {"id":"P05","label":"Base Fill","role_examples":["base-fill"]},
+    {"id":"P06","label":"Transparent Wash","role_examples":["transparent-wash"]},
+    {"id":"P07","label":"Local Color","role_examples":["local-color"]},
+    {"id":"P08","label":"Wet Edge / Bleed","role_examples":["wet-edge","bleed"]},
+    {"id":"P09","label":"Blend / Smudge","role_examples":["blend","smudge"]},
+    {"id":"P10","label":"Texture / Grain","role_examples":["paper-grain","pigment-texture"]},
+    {"id":"P11","label":"Shadow / Value","role_examples":["shadow-wash","value-block"]},
+    {"id":"P12","label":"Dry Brush","role_examples":["dry-brush","broken-edge"]},
+    {"id":"P13","label":"Fur / Hair","role_examples":["short-fur","long-fur","rough-fur","fluffy-fur"]},
+    {"id":"P14","label":"Fabric / Clothing","role_examples":["fabric-fill","fabric-texture","seam-detail"]},
+    {"id":"P15","label":"Decorative / Pattern / Accessory","role_examples":["pattern","ribbon-line","decorative-fill"]},
+    {"id":"P16","label":"Environment / Foliage / Architecture","role_examples":["foliage","environment-texture","architecture-line"]},
+    {"id":"P17","label":"Fine Detail","role_examples":["micro-detail"]},
+    {"id":"P18","label":"Highlight","role_examples":["highlight","opaque-accent"]},
+    {"id":"P19","label":"Glaze / Color Refinement","role_examples":["glaze","refinement-wash"]},
+    {"id":"P20","label":"Final Cleanup","role_examples":["cleanup-line","eraser-cleanup","final-accent"]}
+  ],
+  "rule": "Every stage must be classified before FINAL_COUNT; missing REQUIRED stages trigger UNDERCOVERAGE_REVIEW_REQUIRED."
+}

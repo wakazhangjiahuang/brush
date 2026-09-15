@@ -1,0 +1,8 @@
+{
+  "schema_version": "2.0",
+  "branch": "cartoon",
+  "state": "PROPOSED_BASELINE",
+  "evidence_source": "Remote repository process media must be inspected before treating stage details as verified.",
+  "default_stage_emphasis": ["P01","P03","P04","P05","P07","P10","P11","P14","P15","P17","P18","P19","P20"],
+  "rules": ["Current artwork overrides baseline.","Do not assume every stage is required.","Material-specific stages are added dynamically."]
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": "2.0",
+  "purpose": "Material and object behavior audit",
+  "materials": [
+    {"id":"fur_short","label":"Short Fur"},
+    {"id":"fur_long","label":"Long Fur"},
+    {"id":"fur_curly","label":"Curly / Fluffy Fur"},
+    {"id":"fur_rough","label":"Rough / Terrier Fur"},
+    {"id":"fur_dense_dark","label":"Dense Dark Fur"},
+    {"id":"hair","label":"Human Hair"},
+    {"id":"skin","label":"Skin"},
+    {"id":"fabric","label":"Fabric / Clothing"},
+    {"id":"ribbon","label":"Ribbon / Decorative Smooth Line"},
+    {"id":"paper","label":"Paper"},
+    {"id":"wood","label":"Wood"},
+    {"id":"foliage","label":"Foliage"},
+    {"id":"metal","label":"Metal"},
+    {"id":"glass","label":"Glass"},
+    {"id":"watercolor_wash","label":"Watercolor Wash"},
+    {"id":"dry_pigment","label":"Dry Pigment"},
+    {"id":"rough_pencil","label":"Rough Pencil"},
+    {"id":"smooth_line","label":"Smooth Decorative Line"}
+  ],
+  "rule": "Visible material-specific behavior must be mapped to a Brush Role or explicitly justified as covered by a compatible role."
+}

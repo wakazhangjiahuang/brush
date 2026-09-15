@@ -1,0 +1,14 @@
+{
+  "schema_version": "2.0",
+  "registry_state": "BOOTSTRAP",
+  "purpose": "Persist only actually extracted or software-validated brush capability evidence. Do not populate from filenames alone.",
+  "allowed_validation_states": ["VERIFIED", "VERIFIED_METADATA", "INFERRED", "PROPOSED", "UNVERIFIED"],
+  "required_fields_for_verified_metadata": ["brush_id", "native_name", "source_path", "native_format", "metadata", "validation_state", "evidence_date"],
+  "entries": [],
+  "population_policy": [
+    "Append only evidence extracted from native brush packages or real target-software tests.",
+    "Do not translate purpose_hint or filename text into verified behavior.",
+    "Keep source hashes when available so future runs can reuse validated capability evidence.",
+    "If a brush binary changes, invalidate prior capability evidence until rechecked."
+  ]
+}
