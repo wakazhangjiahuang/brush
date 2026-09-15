@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "artist_profile_id": "primary-illustrator",
+  "profile_type": "technical_workflow_profile",
+  "identity_policy": "Do not infer or expose personal identity details from images or videos. This profile stores only reusable technical workflow information.",
+  "source_of_truth": "https://github.com/wakazhangjiahuang/brush",
+  "verified_date": "2026-09-15",
+  "workflow_branches": [
+    {
+      "id": "cartoon",
+      "label": "卡通插画",
+      "process_source": "插画师/卡通录播流程",
+      "brush_sources": [
+        "笔刷/卡通笔刷-单",
+        "笔刷/套装笔刷"
+      ],
+      "evidence_state": "repository_media_present"
+    },
+    {
+      "id": "vintage",
+      "label": "复古插画",
+      "process_source": "插画师/复古录播流程",
+      "brush_sources": [
+        "笔刷/复古笔刷-单",
+        "笔刷/套装笔刷"
+      ],
+      "evidence_state": "repository_media_present"
+    }
+  ],
+  "shared_contract": {
+    "artist_profile_and_brush_dna": "single_source_of_truth",
+    "project_artwork_priority": "highest",
+    "reuse_policy": "Reuse repository profile/process/brush evidence without asking the user to re-upload it.",
+    "parameter_policy": "No invented brush parameters; filename-derived purpose is only a routing hint until validated.",
+    "software_validation": "Real Procreate/Photoshop import or behavior verification must be explicitly recorded before claiming PASS."
+  }
+}
