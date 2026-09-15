@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "verified_date": "2026-09-15",
+  "processes": [
+    {
+      "process_id": "process-cartoon-01",
+      "label": "卡通录播流程",
+      "path": "插画师/卡通录播流程",
+      "media": [
+        {"path": "插画师/卡通录播流程/2-1.jpg", "type": "image", "role": "process_evidence"},
+        {"path": "插画师/卡通录播流程/2-2.jpg", "type": "image", "role": "process_evidence"},
+        {"path": "插画师/卡通录播流程/2-3.jpg", "type": "image", "role": "process_evidence"},
+        {"path": "插画师/卡通录播流程/2.mp4", "type": "video", "role": "process_recording"},
+        {"path": "插画师/卡通录播流程/9f317cf7dfdb5c8ac05080356a7100ba.png", "type": "image", "role": "reference_evidence"}
+      ],
+      "evidence_policy": "Media proves source availability. Detailed drawing steps must be derived from actual media inspection, not filename inference."
+    },
+    {
+      "process_id": "process-vintage-01",
+      "label": "复古录播流程",
+      "path": "插画师/复古录播流程",
+      "media": [
+        {"path": "插画师/复古录播流程/3-1.jpg", "type": "image", "role": "process_evidence"},
+        {"path": "插画师/复古录播流程/3-2.jpg", "type": "image", "role": "process_evidence"},
+        {"path": "插画师/复古录播流程/3-3.jpg", "type": "image", "role": "process_evidence"},
+        {"path": "插画师/复古录播流程/3.mp4", "type": "video", "role": "process_recording"},
+        {"path": "插画师/复古录播流程/355323a665a6a8122ad58e4a83fca301.png", "type": "image", "role": "reference_evidence"}
+      ],
+      "evidence_policy": "Media proves source availability. Detailed drawing steps must be derived from actual media inspection, not filename inference."
+    }
+  ]
+}
