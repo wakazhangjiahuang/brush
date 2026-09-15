@@ -1,0 +1,43 @@
+name: brush-runtime-export
+
+on:
+  push:
+    paths:
+      - '.github/workflows/brush-runtime-export.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export-runtime-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository with LFS
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+
+      - name: Resolve LFS assets
+        run: git lfs pull
+
+      - name: Collect runtime assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p export/brushes/vintage-single export/brushes/brushsets export/template export/process
+          cp -a "笔刷/复古笔刷-单/." export/brushes/vintage-single/
+          cp "笔刷/套装笔刷/田心水彩笔刷59支——复古类 1.brushset" export/brushes/brushsets/
+          cp "templates/Procreate/柔彩小熊原稿｜Procreate 新笔刷绘画操作流程.xlsx" export/template/
+          cp "插画师/复古录播流程/3-1.jpg" export/process/
+          cp "插画师/复古录播流程/3-2.jpg" export/process/
+          cp "插画师/复古录播流程/3-3.jpg" export/process/
+
+      - name: Upload runtime assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: brush-runtime-export
+          path: export
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
