@@ -139,13 +139,19 @@ A `.brush` may reach `NATIVE_STRUCTURE_PASS` only when:
 - the file is a ZIP-based native package;
 - `Brush.archive` exists and is parseable;
 - internal brush name can be read when present;
-- explicit Shape / Grain / Texture file references found in the archive resolve to actual package members.
+- any **explicit package-local** Shape / Grain / Texture path reference resolves to an actual package member.
 
-If an explicit required native resource reference is missing:
+Procreate archives may also contain **bare resource identifiers** such as `Brush-Preset-*`, `Brush-Artery-*`, `Brush-Pocket-*`, `Gouache-Wash.jpg`, `Acrylic-Square.jpg`, or similar names that can refer to Procreate/system/library assets rather than files embedded in the `.brush` ZIP. A bare filename that is not present in the package must therefore be recorded as `external_or_system_resource_refs`; its absence alone is **not** package-corruption evidence and must not fail structural validation.
+
+Hard failure applies only when a reference is demonstrably package-local (for example a path-qualified relative reference) and that referenced member is missing:
 - `status = NATIVE_OUTPUT_BLOCKED`
-- `reason_code = MISSING_REFERENCED_NATIVE_RESOURCE`
+- `reason_code = MISSING_PACKAGE_LOCAL_NATIVE_RESOURCE`
 
-Absence of an explicit file reference does **not** prove drawing behavior; it only means no missing referenced resource was detected.
+For external/system refs, structural validation may still pass as `VERIFIED_METADATA`, but the result must record:
+- `external_or_system_resource_refs`
+- `external_resource_validation = NOT_TARGET_SOFTWARE_VALIDATED`
+
+This distinction prevents false negatives while preserving the boundary that only a real Procreate import/drawing test can establish `VERIFIED` / `FULL_PASS`.
 
 ## 9. `.brushset` structure gate
 
