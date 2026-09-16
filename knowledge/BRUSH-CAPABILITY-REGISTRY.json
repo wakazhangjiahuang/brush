@@ -1,7 +1,7 @@
 {
-  "schema_version": "2.1",
+  "schema_version": "2.0",
   "registry_state": "ACTIVE_PARTIAL",
-  "purpose": "Persist only capability evidence extracted from native packages or real target-software tests. Filename/purpose_hint never creates VERIFIED behavior.",
+  "purpose": "V2.0 enhanced evidence registry. Persist only capability evidence extracted from native packages or real target-software tests. Filename/purpose_hint never creates VERIFIED behavior.",
   "allowed_validation_states": [
     "VERIFIED_METADATA",
     "VERIFIED"
@@ -146,6 +146,7 @@
     "Append only after native_runtime or real target-software validation returns evidence tied to a source hash.",
     "VERIFIED_METADATA means native structure/metadata evidence, not drawing feel.",
     "VERIFIED requires a real Procreate import/drawing validation.",
-    "Do not convert filenames or discovery hints into capability evidence."
+    "Do not convert filenames or discovery hints into capability evidence.",
+    "This registry is a V2.0 enhancement source, not a V2.1-only runtime requirement."
   ]
 }
