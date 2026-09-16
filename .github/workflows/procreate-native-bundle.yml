@@ -1,0 +1,128 @@
+name: Procreate Native Bundle Bridge
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Branch-scoped native bundle to build
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - cartoon
+          - vintage
+          - mixed
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/procreate-native-bundle.yml"
+      - "KB-MANIFEST.json"
+      - "runtime/**"
+      - "knowledge/BRUSH-REGISTRY.json"
+      - "knowledge/BRUSH-CAPABILITY-REGISTRY.json"
+      - "templates/Procreate/**"
+      - "笔刷/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: procreate-native-bundle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cartoon:
+    name: Build cartoon native bundle
+    if: github.event_name == 'push' || github.event.inputs.profile == 'all' || github.event.inputs.profile == 'cartoon' || github.event.inputs.profile == 'mixed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout without automatic full LFS download
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: false
+
+      - name: Verify runtimes compile
+        run: |
+          python -m py_compile runtime/native_runtime.py runtime/binary_materialization.py
+
+      - name: Materialize routed cartoon LFS brushset only
+        shell: bash
+        run: |
+          git lfs version
+          git lfs pull --include="笔刷/套装笔刷/水彩18支——卡通插画.brushset" --exclude=""
+          python runtime/native_runtime.py detect-lfs "笔刷/套装笔刷/水彩18支——卡通插画.brushset"
+
+      - name: Build cartoon branch runtime bundle
+        run: |
+          python runtime/binary_materialization.py prepare-bundle \
+            --profile cartoon \
+            --repo-root . \
+            --output "$RUNNER_TEMP/procreate-runtime-cartoon"
+
+      - name: Verify cartoon bundle contains real binaries
+        shell: bash
+        run: |
+          test -f "$RUNNER_TEMP/procreate-runtime-cartoon/templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx"
+          test -f "$RUNNER_TEMP/procreate-runtime-cartoon/native-asset-manifest.json"
+          find "$RUNNER_TEMP/procreate-runtime-cartoon" -type f -name '*.brush' -print -quit | grep -q .
+          find "$RUNNER_TEMP/procreate-runtime-cartoon" -type f -name '*.brushset' -print -quit | grep -q .
+
+      - name: Upload cartoon binary bridge artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: procreate-runtime-cartoon
+          path: ${{ runner.temp }}/procreate-runtime-cartoon
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  vintage:
+    name: Build vintage native bundle
+    if: github.event_name == 'push' || github.event.inputs.profile == 'all' || github.event.inputs.profile == 'vintage' || github.event.inputs.profile == 'mixed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout without automatic full LFS download
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: false
+
+      - name: Verify runtimes compile
+        run: |
+          python -m py_compile runtime/native_runtime.py runtime/binary_materialization.py
+
+      - name: Materialize routed vintage LFS brushset only
+        shell: bash
+        run: |
+          git lfs version
+          git lfs pull --include="笔刷/套装笔刷/田心水彩笔刷59支——复古类 1.brushset" --exclude=""
+          python runtime/native_runtime.py detect-lfs "笔刷/套装笔刷/田心水彩笔刷59支——复古类 1.brushset"
+
+      - name: Build vintage branch runtime bundle
+        run: |
+          python runtime/binary_materialization.py prepare-bundle \
+            --profile vintage \
+            --repo-root . \
+            --output "$RUNNER_TEMP/procreate-runtime-vintage"
+
+      - name: Verify vintage bundle contains real binaries
+        shell: bash
+        run: |
+          test -f "$RUNNER_TEMP/procreate-runtime-vintage/templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx"
+          test -f "$RUNNER_TEMP/procreate-runtime-vintage/native-asset-manifest.json"
+          find "$RUNNER_TEMP/procreate-runtime-vintage" -type f -name '*.brush' -print -quit | grep -q .
+          find "$RUNNER_TEMP/procreate-runtime-vintage" -type f -name '*.brushset' -print -quit | grep -q .
+
+      - name: Upload vintage binary bridge artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: procreate-runtime-vintage
+          path: ${{ runner.temp }}/procreate-runtime-vintage
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
