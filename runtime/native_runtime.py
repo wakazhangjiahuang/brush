@@ -1,191 +1,818 @@
 #!/usr/bin/env python3
 """
-$brush-creator-studio V2.1 native runtime.
+$brush-creator-studio V2.0.0 compatible native runtime.
 
-Scope:
+Repository runtime capability (not a Skill version upgrade):
 - Procreate .brush / .brushset structural inspection
 - Git LFS pointer detection and best-effort local resolution
-- evidence-safe derivation from a valid .brush base
-- .brushset assembly from validated .brush files
-- family/package validation
-- delivery ZIP count-consistency validation
+- evidence-safe KEEP / ADJUST / DERIVE from validated native bases
+- .brushset assembly
+- native family validation
+- final delivery ZIP validation against:
+  Expected Native Brush Set
+  = Delivered .brush Set
+  = Brushset Member Set
+  = XLSX Referenced Brush Set
 
-Important:
-Structural PACKAGE validation is not equivalent to a real Procreate import/drawing test.
-FULL PASS requires target-software validation outside this module.
+Structural PACKAGE_PASS is not a real Procreate import/drawing test.
+FULL_PASS requires target-software validation outside this module.
 """
 from __future__ import annotations
-import argparse, hashlib, json, os, plistlib, re, shutil, subprocess, tempfile, uuid, zipfile
+
+import argparse
+from collections import Counter
+import hashlib
+import json
+import os
+import plistlib
+import re
+import shutil
+import subprocess
+import tempfile
+import uuid
+import zipfile
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Set, Tuple, Union
+
 PathLike = Union[str, os.PathLike]
+
 LFS_HEADER = b"version https://git-lfs.github.com/spec/v1"
 LFS_OID_RE = re.compile(rb"oid sha256:([0-9a-f]{64})")
 LFS_SIZE_RE = re.compile(rb"size ([0-9]+)")
 REQUIRED_BRUSH_MEMBER = "Brush.archive"
-SAFE_ARCHIVE_PATCH_FIELDS = {"plotSpacing","plotJitter","plotJitterLongitudinal","plotSmoothing","maxSize","minSize","maxOpacity","minOpacity","dynamicsPressureSize","dynamicsPressureOpacity","dynamicsPressureResponse","dynamicsTiltSize","wetEdgesAmount","dynamicsWetAccumulation","dynamicsWetnessJitter","dynamicsLoad","dynamicsPressureMix","dynamicsSmudgeAccumulation","grainDepth","textureScale","textureContrast","paintSize","paintOpacity","smudgeSize","smudgeOpacity"}
-def _result(status: str, *, evidence_state: str="UNVERIFIED", internal_name: Optional[str]=None, sha256: Optional[str]=None, member_count: Optional[int]=None, missing_members: Optional[Sequence[str]]=None, extra_members: Optional[Sequence[str]]=None, errors: Optional[Sequence[str]]=None, **extra: Any)->Dict[str,Any]:
-    out={"status":status,"evidence_state":evidence_state,"internal_name":internal_name,"sha256":sha256,"member_count":member_count,"missing_members":list(missing_members or []),"extra_members":list(extra_members or []),"errors":list(errors or [])}; out.update(extra); return out
-def _read_bytes(x):
-    return bytes(x) if isinstance(x,(bytes,bytearray)) else Path(x).read_bytes()
-def _sha256_bytes(data: bytes)->str: return hashlib.sha256(data).hexdigest()
-def _sha256_file(path: PathLike)->str:
-    h=hashlib.sha256()
-    with open(path,"rb") as f:
-        for chunk in iter(lambda:f.read(1024*1024),b""): h.update(chunk)
+
+PASS_STATUSES = {"NATIVE_METADATA_PASS", "NATIVE_STRUCTURE_PASS", "PACKAGE_PASS"}
+
+SAFE_ARCHIVE_PATCH_FIELDS = {
+    "plotSpacing", "plotJitter", "plotJitterLongitudinal", "plotSmoothing",
+    "maxSize", "minSize", "maxOpacity", "minOpacity",
+    "dynamicsPressureSize", "dynamicsPressureOpacity", "dynamicsPressureResponse",
+    "dynamicsTiltSize", "wetEdgesAmount", "dynamicsWetAccumulation",
+    "dynamicsWetnessJitter", "dynamicsLoad", "dynamicsPressureMix",
+    "dynamicsSmudgeAccumulation", "grainDepth", "textureScale",
+    "textureContrast", "paintSize", "paintOpacity", "smudgeSize", "smudgeOpacity",
+}
+
+RESOURCE_KEYWORDS = ("shape", "grain", "texture")
+RESOURCE_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".gif", ".heic",
+    ".dat", ".bin", ".archive", ".plist",
+}
+
+
+def _result(
+    status: str,
+    *,
+    reason_code: Optional[str] = None,
+    evidence_state: str = "UNVERIFIED",
+    internal_name: Optional[str] = None,
+    sha256: Optional[str] = None,
+    member_count: Optional[int] = None,
+    missing_members: Optional[Sequence[str]] = None,
+    extra_members: Optional[Sequence[str]] = None,
+    errors: Optional[Sequence[str]] = None,
+    **extra: Any,
+) -> Dict[str, Any]:
+    out: Dict[str, Any] = {
+        "status": status,
+        "reason_code": reason_code,
+        "evidence_state": evidence_state,
+        "internal_name": internal_name,
+        "sha256": sha256,
+        "member_count": member_count,
+        "missing_members": list(missing_members or []),
+        "extra_members": list(extra_members or []),
+        "errors": list(errors or []),
+    }
+    out.update(extra)
+    return out
+
+
+def _read_bytes(value: Union[PathLike, bytes, bytearray]) -> bytes:
+    if isinstance(value, (bytes, bytearray)):
+        return bytes(value)
+    return Path(value).read_bytes()
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _sha256_file(path: PathLike) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            h.update(chunk)
     return h.hexdigest()
-def detect_lfs_pointer(path_or_bytes)->Dict[str,Any]:
-    try: data=_read_bytes(path_or_bytes)
-    except Exception as exc: return _result("READ_FAILED",errors=[str(exc)])
-    head=data[:1024]
-    if not head.startswith(LFS_HEADER): return _result("NOT_LFS_POINTER",evidence_state="VERIFIED_METADATA",sha256=_sha256_bytes(data),is_lfs_pointer=False)
-    oid=LFS_OID_RE.search(head); size=LFS_SIZE_RE.search(head)
-    return _result("LFS_POINTER",evidence_state="VERIFIED_METADATA",sha256=_sha256_bytes(data),is_lfs_pointer=True,lfs_oid_sha256=oid.group(1).decode() if oid else None,lfs_size=int(size.group(1)) if size else None)
-def _decode_archive(data: bytes)->Tuple[Dict[str,Any],list,Dict[str,Any]]:
-    payload=plistlib.loads(data); objs=payload.get("$objects")
-    if not isinstance(objs,list) or len(objs)<2 or not isinstance(objs[1],dict): raise ValueError("Unsupported Brush.archive keyed-archive structure")
-    return payload,objs,objs[1]
-def _uid_value(objs,value):
-    if isinstance(value,plistlib.UID) and 0<=value.data<len(objs): return objs[value.data]
+
+
+def detect_lfs_pointer(path_or_bytes: Union[PathLike, bytes, bytearray]) -> Dict[str, Any]:
+    try:
+        data = _read_bytes(path_or_bytes)
+    except Exception as exc:
+        return _result(
+            "NATIVE_OUTPUT_BLOCKED",
+            reason_code="READ_FAILED",
+            errors=[str(exc)],
+        )
+
+    head = data[:1024]
+    if not head.startswith(LFS_HEADER):
+        return _result(
+            "NATIVE_METADATA_PASS",
+            reason_code="NOT_LFS_POINTER",
+            evidence_state="VERIFIED_METADATA",
+            sha256=_sha256_bytes(data),
+            is_lfs_pointer=False,
+        )
+
+    oid = LFS_OID_RE.search(head)
+    size = LFS_SIZE_RE.search(head)
+    return _result(
+        "LFS_POINTER",
+        reason_code="GIT_LFS_POINTER_DETECTED",
+        evidence_state="VERIFIED_METADATA",
+        sha256=_sha256_bytes(data),
+        is_lfs_pointer=True,
+        lfs_oid_sha256=oid.group(1).decode() if oid else None,
+        lfs_size=int(size.group(1)) if size else None,
+    )
+
+
+def _decode_archive(data: bytes) -> Tuple[Dict[str, Any], list, Dict[str, Any]]:
+    payload = plistlib.loads(data)
+    objects = payload.get("$objects")
+    if not isinstance(objects, list) or len(objects) < 2 or not isinstance(objects[1], dict):
+        raise ValueError("Unsupported Brush.archive keyed-archive structure")
+    return payload, objects, objects[1]
+
+
+def _uid_value(objects: list, value: Any) -> Any:
+    if isinstance(value, plistlib.UID) and 0 <= value.data < len(objects):
+        return objects[value.data]
     return value
-def _brush_name_from_archive(data: bytes)->Optional[str]:
+
+
+def _brush_name_from_archive(data: bytes) -> Optional[str]:
     try:
-        _,objs,root=_decode_archive(data); name=_uid_value(objs,root.get("name")); return name if isinstance(name,str) else None
-    except Exception: return None
-def _metadata_subset(root):
-    keys=["version","plotSpacing","plotJitter","plotJitterLongitudinal","plotSmoothing","maxSize","minSize","maxOpacity","minOpacity","dynamicsPressureSize","dynamicsPressureOpacity","dynamicsPressureResponse","dynamicsTiltSize","wetEdgesAmount","dynamicsWetAccumulation","dynamicsWetnessJitter","dynamicsLoad","dynamicsPressureMix","dynamicsSmudgeAccumulation","grainDepth","textureScale","textureContrast","textureMovement","shapeCount","shapeScatter","shapeRandomise","importedFromABR","renderingRecursiveMixing","paintSize","paintOpacity","smudgeSize","smudgeOpacity"]
-    return {k:root[k] for k in keys if k in root and isinstance(root[k],(str,int,float,bool))}
-def inspect_brush(file: PathLike)->Dict[str,Any]:
-    p=Path(file)
-    if not p.exists(): return _result("BRUSH_NOT_FOUND",errors=[str(p)])
-    lfs=detect_lfs_pointer(p)
-    if lfs.get("is_lfs_pointer"): return _result("BRUSH_LFS_POINTER_BLOCKED",evidence_state="VERIFIED_METADATA",sha256=_sha256_file(p),errors=["Git LFS pointer is not a native .brush package"],lfs=lfs)
+        _, objects, root = _decode_archive(data)
+        name = _uid_value(objects, root.get("name"))
+        return name if isinstance(name, str) else None
+    except Exception:
+        return None
+
+
+def _metadata_subset(root: Dict[str, Any]) -> Dict[str, Any]:
+    keys = [
+        "version", "plotSpacing", "plotJitter", "plotJitterLongitudinal", "plotSmoothing",
+        "maxSize", "minSize", "maxOpacity", "minOpacity",
+        "dynamicsPressureSize", "dynamicsPressureOpacity", "dynamicsPressureResponse",
+        "dynamicsTiltSize", "wetEdgesAmount", "dynamicsWetAccumulation",
+        "dynamicsWetnessJitter", "dynamicsLoad", "dynamicsPressureMix",
+        "dynamicsSmudgeAccumulation", "grainDepth", "textureScale", "textureContrast",
+        "textureMovement", "shapeCount", "shapeScatter", "shapeRandomise",
+        "importedFromABR", "renderingRecursiveMixing", "paintSize", "paintOpacity",
+        "smudgeSize", "smudgeOpacity",
+    ]
+    return {
+        key: root[key]
+        for key in keys
+        if key in root and isinstance(root[key], (str, int, float, bool))
+    }
+
+
+def _looks_like_resource_path(value: str) -> bool:
+    stripped = value.strip()
+    if not stripped or len(stripped) > 512:
+        return False
+    suffix = Path(stripped).suffix.lower()
+    return "/" in stripped or "\\" in stripped or suffix in RESOURCE_EXTENSIONS
+
+
+def _collect_explicit_resource_refs(objects: list, root: Dict[str, Any]) -> Set[str]:
+    """Conservatively audit explicit Shape/Grain/Texture file references."""
+    refs: Set[str] = set()
+    seen_uids: Set[int] = set()
+    seen_obj_ids: Set[int] = set()
+
+    def walk(value: Any, key_hint: str = "") -> None:
+        if isinstance(value, plistlib.UID):
+            if value.data in seen_uids or not (0 <= value.data < len(objects)):
+                return
+            seen_uids.add(value.data)
+            walk(objects[value.data], key_hint)
+            return
+        if isinstance(value, dict):
+            obj_id = id(value)
+            if obj_id in seen_obj_ids:
+                return
+            seen_obj_ids.add(obj_id)
+            for key, child in value.items():
+                walk(child, str(key))
+            return
+        if isinstance(value, (list, tuple)):
+            for child in value:
+                walk(child, key_hint)
+            return
+        if isinstance(value, str):
+            hint = key_hint.lower()
+            if any(word in hint for word in RESOURCE_KEYWORDS) and _looks_like_resource_path(value):
+                refs.add(value.replace("\\", "/"))
+
+    walk(root)
+    return refs
+
+
+def _match_resource_ref(ref: str, zip_names: Sequence[str]) -> bool:
+    normalized = ref.lstrip("./")
+    names = {name.lstrip("./") for name in zip_names}
+    if normalized in names:
+        return True
+    ref_name = Path(normalized).name
+    return any(Path(name).name == ref_name for name in names)
+
+
+def inspect_brush(file: PathLike) -> Dict[str, Any]:
+    path = Path(file)
+    if not path.exists():
+        return _result("NATIVE_OUTPUT_BLOCKED", reason_code="BRUSH_NOT_FOUND", errors=[str(path)])
+
+    lfs = detect_lfs_pointer(path)
+    if lfs.get("status") == "LFS_POINTER":
+        return _result(
+            "NATIVE_OUTPUT_BLOCKED",
+            reason_code="BRUSH_IS_LFS_POINTER",
+            evidence_state="VERIFIED_METADATA",
+            sha256=_sha256_file(path),
+            errors=["Git LFS pointer is not a native .brush package"],
+            lfs=lfs,
+        )
+
+    if not zipfile.is_zipfile(path):
+        return _result(
+            "NATIVE_OUTPUT_BLOCKED",
+            reason_code="INVALID_BRUSH_STRUCTURE",
+            sha256=_sha256_file(path),
+            errors=[".brush is not a ZIP-based native package"],
+        )
+
     try:
-        if not zipfile.is_zipfile(p): return _result("INVALID_BRUSH_STRUCTURE",sha256=_sha256_file(p),errors=[".brush is not a ZIP-based native package"])
-        with zipfile.ZipFile(p) as z:
-            names=z.namelist()
-            if REQUIRED_BRUSH_MEMBER not in names: return _result("INVALID_BRUSH_STRUCTURE",sha256=_sha256_file(p),missing_members=[REQUIRED_BRUSH_MEMBER],errors=["Required Brush.archive missing"])
-            archive=z.read(REQUIRED_BRUSH_MEMBER); internal=_brush_name_from_archive(archive)
-            try: _,_,root=_decode_archive(archive); metadata=_metadata_subset(root)
-            except Exception as exc: return _result("BRUSH_ARCHIVE_UNSUPPORTED",internal_name=internal,sha256=_sha256_file(p),errors=[str(exc)],zip_members=names)
-            return _result("PASS",evidence_state="VERIFIED_METADATA",internal_name=internal,sha256=_sha256_file(p),member_count=1,metadata=metadata,zip_members=names,structural_validation="PACKAGE_STRUCTURE_ONLY")
-    except Exception as exc: return _result("BRUSH_INSPECTION_FAILED",sha256=_sha256_file(p),errors=[str(exc)])
-def inspect_brushset(file: PathLike)->Dict[str,Any]:
-    p=Path(file)
-    if not p.exists(): return _result("BRUSHSET_NOT_FOUND",errors=[str(p)])
-    lfs=detect_lfs_pointer(p)
-    if lfs.get("is_lfs_pointer"): return _result("BRUSHSET_LFS_POINTER_BLOCKED",evidence_state="VERIFIED_METADATA",sha256=_sha256_file(p),errors=["Git LFS pointer is not a native .brushset"],lfs=lfs)
-    if not zipfile.is_zipfile(p): return _result("INVALID_BRUSHSET_STRUCTURE",sha256=_sha256_file(p),errors=[".brushset is not a ZIP-based native package"])
+        with zipfile.ZipFile(path) as archive_zip:
+            names = [n for n in archive_zip.namelist() if not n.endswith("/")]
+            if REQUIRED_BRUSH_MEMBER not in names:
+                return _result(
+                    "NATIVE_OUTPUT_BLOCKED",
+                    reason_code="INVALID_BRUSH_STRUCTURE",
+                    sha256=_sha256_file(path),
+                    missing_members=[REQUIRED_BRUSH_MEMBER],
+                    errors=["Required Brush.archive missing"],
+                )
+
+            archive_bytes = archive_zip.read(REQUIRED_BRUSH_MEMBER)
+            internal_name = _brush_name_from_archive(archive_bytes)
+            try:
+                _, objects, root = _decode_archive(archive_bytes)
+                metadata = _metadata_subset(root)
+            except Exception as exc:
+                return _result(
+                    "NATIVE_OUTPUT_BLOCKED",
+                    reason_code="BRUSH_ARCHIVE_UNSUPPORTED",
+                    internal_name=internal_name,
+                    sha256=_sha256_file(path),
+                    errors=[str(exc)],
+                    zip_members=names,
+                )
+
+            explicit_refs = sorted(_collect_explicit_resource_refs(objects, root))
+            missing_refs = sorted(ref for ref in explicit_refs if not _match_resource_ref(ref, names))
+            if missing_refs:
+                return _result(
+                    "NATIVE_OUTPUT_BLOCKED",
+                    reason_code="MISSING_REFERENCED_NATIVE_RESOURCE",
+                    internal_name=internal_name,
+                    sha256=_sha256_file(path),
+                    missing_members=missing_refs,
+                    errors=["One or more explicit Shape/Grain/Texture resource references are missing"],
+                    metadata=metadata,
+                    explicit_resource_refs=explicit_refs,
+                    zip_members=names,
+                )
+
+            return _result(
+                "NATIVE_STRUCTURE_PASS",
+                reason_code="BRUSH_STRUCTURE_VALID",
+                evidence_state="VERIFIED_METADATA",
+                internal_name=internal_name,
+                sha256=_sha256_file(path),
+                member_count=1,
+                metadata=metadata,
+                explicit_resource_refs=explicit_refs,
+                resource_reference_check="EXPLICIT_REFS_RESOLVED" if explicit_refs else "NO_EXPLICIT_FILE_REFS_FOUND",
+                zip_members=names,
+                structural_validation="PACKAGE_STRUCTURE_ONLY",
+            )
+    except Exception as exc:
+        return _result(
+            "NATIVE_OUTPUT_BLOCKED",
+            reason_code="BRUSH_INSPECTION_FAILED",
+            sha256=_sha256_file(path),
+            errors=[str(exc)],
+        )
+
+
+def inspect_brushset(file: PathLike) -> Dict[str, Any]:
+    path = Path(file)
+    if not path.exists():
+        return _result("NATIVE_OUTPUT_BLOCKED", reason_code="BRUSHSET_NOT_FOUND", errors=[str(path)])
+
+    lfs = detect_lfs_pointer(path)
+    if lfs.get("status") == "LFS_POINTER":
+        return _result(
+            "NATIVE_OUTPUT_BLOCKED",
+            reason_code="BRUSHSET_IS_LFS_POINTER",
+            evidence_state="VERIFIED_METADATA",
+            sha256=_sha256_file(path),
+            errors=["Git LFS pointer is not a native .brushset"],
+            lfs=lfs,
+        )
+
+    if not zipfile.is_zipfile(path):
+        return _result(
+            "NATIVE_OUTPUT_BLOCKED",
+            reason_code="INVALID_BRUSHSET_STRUCTURE",
+            sha256=_sha256_file(path),
+            errors=[".brushset is not a ZIP-based native package"],
+        )
+
     try:
-        with zipfile.ZipFile(p) as z:
-            names=z.namelist()
-            if "brushset.plist" not in names: return _result("INVALID_BRUSHSET_STRUCTURE",sha256=_sha256_file(p),missing_members=["brushset.plist"],errors=["brushset.plist missing"])
-            pl=plistlib.loads(z.read("brushset.plist")); order=pl.get("brushes",[]) if isinstance(pl,dict) else []; set_name=pl.get("name") if isinstance(pl,dict) else None
-            if not isinstance(order,list): order=[]
-            archive_dirs={n.split("/",1)[0] for n in names if n.count("/")==1 and n.endswith("/Brush.archive")}; missing=[m for m in order if m not in archive_dirs]; extra=[m for m in archive_dirs if m not in order]
-            members=[]
-            for mid in order:
-                ap=f"{mid}/Brush.archive"; members.append({"member_id":mid,"internal_name":_brush_name_from_archive(z.read(ap)) if ap in names else None})
-            status="PASS" if not missing else "INVALID_BRUSHSET_STRUCTURE"
-            return _result(status,evidence_state="VERIFIED_METADATA" if status=="PASS" else "UNVERIFIED",internal_name=set_name,sha256=_sha256_file(p),member_count=len(order),missing_members=missing,extra_members=extra,members=members,declared_order=order,structural_validation="PACKAGE_STRUCTURE_ONLY")
-    except Exception as exc: return _result("BRUSHSET_INSPECTION_FAILED",sha256=_sha256_file(p),errors=[str(exc)])
-def resolve_lfs_asset(source: PathLike)->Dict[str,Any]:
-    p=Path(source)
-    if not p.exists(): return _result("LFS_SOURCE_NOT_FOUND",errors=[str(p)])
-    state=detect_lfs_pointer(p)
-    if not state.get("is_lfs_pointer"): return _result("PASS",evidence_state="VERIFIED_METADATA",sha256=_sha256_file(p),resolved_path=str(p),was_lfs_pointer=False)
+        with zipfile.ZipFile(path) as archive_zip:
+            names = archive_zip.namelist()
+            if "brushset.plist" not in names:
+                return _result(
+                    "NATIVE_OUTPUT_BLOCKED",
+                    reason_code="INVALID_BRUSHSET_STRUCTURE",
+                    sha256=_sha256_file(path),
+                    missing_members=["brushset.plist"],
+                    errors=["brushset.plist missing"],
+                )
+
+            plist_data = plistlib.loads(archive_zip.read("brushset.plist"))
+            order = plist_data.get("brushes", []) if isinstance(plist_data, dict) else []
+            set_name = plist_data.get("name") if isinstance(plist_data, dict) else None
+            if not isinstance(order, list):
+                return _result(
+                    "NATIVE_OUTPUT_BLOCKED",
+                    reason_code="INVALID_BRUSHSET_PLIST",
+                    sha256=_sha256_file(path),
+                    errors=["brushset.plist 'brushes' is not a list"],
+                )
+
+            archive_dirs = {
+                name.split("/", 1)[0]
+                for name in names
+                if name.count("/") == 1 and name.endswith("/Brush.archive")
+            }
+            declared = [str(member) for member in order]
+            missing = sorted(member for member in declared if member not in archive_dirs)
+            extra = sorted(member for member in archive_dirs if member not in set(declared))
+
+            members = []
+            for member_id in declared:
+                archive_path = f"{member_id}/Brush.archive"
+                members.append({
+                    "member_id": member_id,
+                    "internal_name": _brush_name_from_archive(archive_zip.read(archive_path)) if archive_path in names else None,
+                })
+
+            if missing or extra:
+                return _result(
+                    "NATIVE_OUTPUT_BLOCKED",
+                    reason_code="BRUSHSET_MEMBER_SET_MISMATCH",
+                    internal_name=set_name,
+                    sha256=_sha256_file(path),
+                    member_count=len(declared),
+                    missing_members=missing,
+                    extra_members=extra,
+                    errors=["brushset.plist member IDs and packaged Brush.archive directories differ"],
+                    members=members,
+                    declared_order=declared,
+                )
+
+            return _result(
+                "NATIVE_STRUCTURE_PASS",
+                reason_code="BRUSHSET_STRUCTURE_VALID",
+                evidence_state="VERIFIED_METADATA",
+                internal_name=set_name,
+                sha256=_sha256_file(path),
+                member_count=len(declared),
+                members=members,
+                declared_order=declared,
+                structural_validation="PACKAGE_STRUCTURE_ONLY",
+            )
+    except Exception as exc:
+        return _result(
+            "NATIVE_OUTPUT_BLOCKED",
+            reason_code="BRUSHSET_INSPECTION_FAILED",
+            sha256=_sha256_file(path),
+            errors=[str(exc)],
+        )
+
+
+def resolve_lfs_asset(source: PathLike) -> Dict[str, Any]:
+    path = Path(source)
+    if not path.exists():
+        return _result("LFS_RESOLUTION_BLOCKED", reason_code="LFS_SOURCE_NOT_FOUND", errors=[str(path)])
+
+    state = detect_lfs_pointer(path)
+    if state.get("status") != "LFS_POINTER":
+        return _result(
+            "NATIVE_METADATA_PASS",
+            reason_code="LFS_RESOLUTION_NOT_REQUIRED",
+            evidence_state="VERIFIED_METADATA",
+            sha256=_sha256_file(path),
+            resolved_path=str(path),
+            was_lfs_pointer=False,
+        )
+
     try:
-        root=subprocess.run(["git","-C",str(p.parent),"rev-parse","--show-toplevel"],capture_output=True,text=True,check=True).stdout.strip(); rel=os.path.relpath(p.resolve(),Path(root).resolve())
-        subprocess.run(["git","-C",root,"lfs","pull","--include",rel,"--exclude",""],capture_output=True,text=True,check=True)
-        after=detect_lfs_pointer(p)
-        if after.get("is_lfs_pointer"): return _result("LFS_RESOLUTION_BLOCKED",errors=["git lfs pull completed but file is still a pointer"],lfs=after)
-        return _result("PASS",evidence_state="VERIFIED_METADATA",sha256=_sha256_file(p),resolved_path=str(p),was_lfs_pointer=True)
-    except Exception as exc: return _result("LFS_RESOLUTION_BLOCKED",errors=[str(exc)],lfs=state)
-def _rewrite_zip_member(source: Path,output: Path,member: str,replacement: bytes):
-    with zipfile.ZipFile(source,"r") as src, zipfile.ZipFile(output,"w") as dst:
+        root = subprocess.run(
+            ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        rel = os.path.relpath(path.resolve(), Path(root).resolve())
+        subprocess.run(
+            ["git", "-C", root, "lfs", "pull", "--include", rel, "--exclude", ""],
+            capture_output=True, text=True, check=True,
+        )
+        after = detect_lfs_pointer(path)
+        if after.get("status") == "LFS_POINTER":
+            return _result(
+                "LFS_RESOLUTION_BLOCKED",
+                reason_code="LFS_OBJECT_STILL_POINTER",
+                errors=["git lfs pull completed but file is still a pointer"],
+                lfs=after,
+            )
+        return _result(
+            "NATIVE_METADATA_PASS",
+            reason_code="LFS_ASSET_RESOLVED",
+            evidence_state="VERIFIED_METADATA",
+            sha256=_sha256_file(path),
+            resolved_path=str(path),
+            was_lfs_pointer=True,
+        )
+    except Exception as exc:
+        return _result(
+            "LFS_RESOLUTION_BLOCKED",
+            reason_code="LFS_RUNTIME_UNAVAILABLE_OR_PULL_FAILED",
+            errors=[str(exc)],
+            lfs=state,
+        )
+
+
+def _rewrite_zip_member(source: Path, output: Path, member: str, replacement: bytes) -> None:
+    with zipfile.ZipFile(source, "r") as src, zipfile.ZipFile(output, "w") as dst:
         for info in src.infolist():
-            data=replacement if info.filename==member else src.read(info.filename); ni=zipfile.ZipInfo(info.filename,date_time=info.date_time); ni.compress_type=info.compress_type; ni.comment=info.comment; ni.extra=info.extra; ni.internal_attr=info.internal_attr; ni.external_attr=info.external_attr; ni.create_system=info.create_system; dst.writestr(ni,data)
-def derive_or_build_brush(base: PathLike,spec: Dict[str,Any],output: PathLike)->Dict[str,Any]:
-    bp=Path(base); op=Path(output); ins=inspect_brush(bp)
-    if ins.get("status")!="PASS": return _result("NATIVE_BUILD_BLOCKED",errors=["Base brush failed native structural inspection"]+ins.get("errors",[]))
-    operation=str(spec.get("operation","KEEP")).upper(); op.parent.mkdir(parents=True,exist_ok=True)
-    if operation in {"KEEP","COPY"} and not spec.get("metadata_patch") and not spec.get("internal_name"): shutil.copy2(bp,op); out=inspect_brush(op); out["build_operation"]=operation; return out
-    if operation not in {"ADJUST","DERIVE","NEW"}: return _result("NATIVE_BUILD_UNSUPPORTED",errors=[f"Unsupported operation: {operation}"])
-    if operation=="NEW" and not spec.get("allow_new_from_validated_base"): return _result("NATIVE_BUILD_UNSUPPORTED",errors=["NEW requires an explicitly validated native base or external format-specific builder"])
+            data = replacement if info.filename == member else src.read(info.filename)
+            new_info = zipfile.ZipInfo(info.filename, date_time=info.date_time)
+            new_info.compress_type = info.compress_type
+            new_info.comment = info.comment
+            new_info.extra = info.extra
+            new_info.internal_attr = info.internal_attr
+            new_info.external_attr = info.external_attr
+            new_info.create_system = info.create_system
+            dst.writestr(new_info, data)
+
+
+def derive_or_build_brush(base: PathLike, spec: Dict[str, Any], output: PathLike) -> Dict[str, Any]:
+    base_path = Path(base)
+    output_path = Path(output)
+    inspection = inspect_brush(base_path)
+    if inspection.get("status") != "NATIVE_STRUCTURE_PASS":
+        return _result(
+            "NATIVE_BUILD_BLOCKED",
+            reason_code="BASE_BRUSH_VALIDATION_FAILED",
+            errors=["Base brush failed native structural inspection"] + inspection.get("errors", []),
+        )
+
+    operation = str(spec.get("operation", "KEEP")).upper()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if operation in {"KEEP", "COPY"} and not spec.get("metadata_patch") and not spec.get("internal_name"):
+        shutil.copy2(base_path, output_path)
+        checked = inspect_brush(output_path)
+        checked["build_operation"] = operation
+        return checked
+
+    if operation not in {"ADJUST", "DERIVE", "NEW"}:
+        return _result("NATIVE_BUILD_BLOCKED", reason_code="UNSUPPORTED_BUILD_OPERATION", errors=[f"Unsupported operation: {operation}"])
+
+    if operation == "NEW" and not spec.get("allow_new_from_validated_base"):
+        return _result(
+            "NATIVE_BUILD_BLOCKED",
+            reason_code="NEW_REQUIRES_VALIDATED_BASE",
+            errors=["NEW requires an explicitly validated native base or external format-specific builder"],
+        )
+
     try:
-        with zipfile.ZipFile(bp) as z: archive=z.read(REQUIRED_BRUSH_MEMBER)
-        payload,objs,root=_decode_archive(archive); patch=spec.get("metadata_patch") or {}; unknown=sorted(set(patch)-SAFE_ARCHIVE_PATCH_FIELDS)
-        if unknown: return _result("NATIVE_BUILD_UNSUPPORTED",errors=[f"Unsafe/unrecognized Brush.archive patch fields: {unknown}"])
-        for k,v in patch.items():
-            if not isinstance(v,(int,float,bool,str)): return _result("NATIVE_BUILD_UNSUPPORTED",errors=[f"Non-scalar patch value for {k}"])
-            root[k]=v
-        name=spec.get("internal_name")
+        with zipfile.ZipFile(base_path) as archive_zip:
+            archive = archive_zip.read(REQUIRED_BRUSH_MEMBER)
+        payload, objects, root = _decode_archive(archive)
+        patch = spec.get("metadata_patch") or {}
+        unknown = sorted(set(patch) - SAFE_ARCHIVE_PATCH_FIELDS)
+        if unknown:
+            return _result("NATIVE_BUILD_BLOCKED", reason_code="UNSAFE_ARCHIVE_PATCH_FIELD", errors=[f"Unsafe/unrecognized Brush.archive patch fields: {unknown}"])
+
+        for key, value in patch.items():
+            if not isinstance(value, (int, float, bool, str)):
+                return _result("NATIVE_BUILD_BLOCKED", reason_code="NON_SCALAR_ARCHIVE_PATCH_VALUE", errors=[f"Non-scalar patch value for {key}"])
+            root[key] = value
+
+        name = spec.get("internal_name")
         if name:
-            ref=root.get("name")
-            if isinstance(ref,plistlib.UID) and 0<=ref.data<len(objs): objs[ref.data]=str(name)
-            elif isinstance(ref,str): root["name"]=str(name)
-            else: return _result("NATIVE_BUILD_UNSUPPORTED",errors=["Could not safely update internal brush name"])
-        rebuilt=plistlib.dumps(payload,fmt=plistlib.FMT_BINARY,sort_keys=False); _rewrite_zip_member(bp,op,REQUIRED_BRUSH_MEMBER,rebuilt); out=inspect_brush(op); out["build_operation"]=operation; out["build_evidence_state"]="PROPOSED"
-        if out.get("status")=="PASS": out["status"]="PACKAGE_STRUCTURE_PASS"; out["evidence_state"]="VERIFIED_METADATA"
-        return out
-    except Exception as exc: return _result("NATIVE_BUILD_FAILED",errors=[str(exc)])
-def _unique_member_id()->str: return str(uuid.uuid4()).upper()
-def build_brushset(brush_files: Sequence[PathLike],output: PathLike,set_name: str="Brush Creator Studio")->Dict[str,Any]:
-    if not brush_files: return _result("NATIVE_BUILD_FAILED",errors=["No brush files supplied"])
-    inspections=[inspect_brush(p) for p in brush_files]; failed=[r for r in inspections if r.get("status") not in {"PASS","PACKAGE_STRUCTURE_PASS"}]
-    if failed: return _result("NATIVE_BUILD_BLOCKED",errors=["At least one brush failed structural validation"],failed_brushes=failed)
-    out=Path(output); out.parent.mkdir(parents=True,exist_ok=True); ids=[_unique_member_id() for _ in brush_files]
+            name_ref = root.get("name")
+            if isinstance(name_ref, plistlib.UID) and 0 <= name_ref.data < len(objects):
+                objects[name_ref.data] = str(name)
+            elif isinstance(name_ref, str):
+                root["name"] = str(name)
+            else:
+                return _result("NATIVE_BUILD_BLOCKED", reason_code="INTERNAL_NAME_PATCH_UNSUPPORTED", errors=["Could not safely update internal brush name"])
+
+        rebuilt = plistlib.dumps(payload, fmt=plistlib.FMT_BINARY, sort_keys=False)
+        _rewrite_zip_member(base_path, output_path, REQUIRED_BRUSH_MEMBER, rebuilt)
+        checked = inspect_brush(output_path)
+        checked["build_operation"] = operation
+        checked["build_evidence_state"] = "PROPOSED"
+        return checked
+    except Exception as exc:
+        return _result("NATIVE_BUILD_FAILED", reason_code="BRUSH_BUILD_EXCEPTION", errors=[str(exc)])
+
+
+def _unique_member_id() -> str:
+    return str(uuid.uuid4()).upper()
+
+
+def build_brushset(brush_files: Sequence[PathLike], output: PathLike, set_name: str = "Brush Creator Studio") -> Dict[str, Any]:
+    if not brush_files:
+        return _result("NATIVE_BUILD_FAILED", reason_code="NO_BRUSH_FILES", errors=["No brush files supplied"])
+
+    inspections = [inspect_brush(path) for path in brush_files]
+    failed = [result for result in inspections if result.get("status") != "NATIVE_STRUCTURE_PASS"]
+    if failed:
+        return _result(
+            "NATIVE_BUILD_BLOCKED",
+            reason_code="SOURCE_BRUSH_VALIDATION_FAILED",
+            errors=["At least one brush failed structural validation"],
+            failed_brushes=failed,
+        )
+
+    output_path = Path(output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    member_ids = [_unique_member_id() for _ in brush_files]
+
     try:
-        with zipfile.ZipFile(out,"w",compression=zipfile.ZIP_DEFLATED) as oz:
-            oz.writestr("brushset.plist",plistlib.dumps({"brushes":ids,"name":set_name},fmt=plistlib.FMT_XML))
-            for brush,mid in zip(brush_files,ids):
+        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as out_zip:
+            out_zip.writestr("brushset.plist", plistlib.dumps({"brushes": member_ids, "name": set_name}, fmt=plistlib.FMT_XML))
+            for brush, member_id in zip(brush_files, member_ids):
                 with zipfile.ZipFile(brush) as src:
                     for info in src.infolist():
-                        if info.filename.endswith("/") or info.filename.startswith("__MACOSX/"): continue
-                        oz.writestr(f"{mid}/{info.filename}",src.read(info.filename))
-        checked=inspect_brushset(out); checked["source_brush_names"]=[x.get("internal_name") for x in inspections]; return checked
-    except Exception as exc: return _result("NATIVE_BUILD_FAILED",errors=[str(exc)])
-def validate_native_family(brushes: Sequence[PathLike],brushset: PathLike)->Dict[str,Any]:
-    br=[inspect_brush(p) for p in brushes]; sr=inspect_brushset(brushset); errors=[]
-    if any(r.get("status") not in {"PASS","PACKAGE_STRUCTURE_PASS"} for r in br): errors.append("One or more individual .brush files failed structural validation")
-    if sr.get("status")!="PASS": errors.append(".brushset failed structural validation")
-    bn=[r.get("internal_name") for r in br]; sn=[m.get("internal_name") for m in sr.get("members",[])]; missing=sorted({n for n in bn if n and n not in sn}); extra=sorted({n for n in sn if n and n not in bn})
-    if len(br)!=sr.get("member_count"): errors.append("Individual brush count != brushset member count")
-    if missing: errors.append("Some delivered brushes are missing from brushset")
-    return _result("PASS" if not errors else "FAMILY_VALIDATION_FAILED",evidence_state="VERIFIED_METADATA" if not errors else "UNVERIFIED",member_count=sr.get("member_count"),missing_members=missing,extra_members=extra,errors=errors,individual_brush_count=len(br),brush_names=bn,brushset_names=sn,count_consistent=(len(br)==sr.get("member_count")))
-def validate_delivery_zip(zip_path: PathLike,xlsx_reference_list: Optional[Sequence[str]]=None)->Dict[str,Any]:
-    p=Path(zip_path)
-    if not p.exists() or not zipfile.is_zipfile(p): return _result("DELIVERY_ZIP_INVALID",errors=["ZIP missing or invalid"])
-    errors=[]
-    with tempfile.TemporaryDirectory() as td:
-        with zipfile.ZipFile(p) as z: z.extractall(td); files=[Path(td)/n for n in z.namelist() if not n.endswith("/")]
-        brushes=[f for f in files if f.suffix==".brush"]; sets=[f for f in files if f.suffix==".brushset"]; xlsx=[f for f in files if f.suffix.lower()==".xlsx"]
-        if not brushes: errors.append("No .brush files in delivery ZIP")
-        if len(sets)!=1: errors.append("Delivery ZIP must contain exactly one .brushset")
-        if len(xlsx)!=1: errors.append("Delivery ZIP must contain exactly one project XLSX")
-        family=validate_native_family(brushes,sets[0]) if brushes and len(sets)==1 else None
-        if family and family.get("status")!="PASS": errors.extend(family.get("errors",[]))
-        names=[r.get("internal_name") for r in [inspect_brush(b) for b in brushes] if r.get("internal_name")]; refs=sorted(set(xlsx_reference_list or [])); missing=sorted(set(refs)-set(names)) if refs else []; extra=sorted(set(names)-set(refs)) if refs else []
-        if missing: errors.append("XLSX references brushes not present in delivery")
-        if family and refs and family.get("member_count")!=len(refs): errors.append("Brushset member count != XLSX referenced distinct brush count")
-        return _result("PACKAGE_PASS" if not errors else "PACKAGE_VALIDATION_FAILED",evidence_state="VERIFIED_METADATA" if not errors else "UNVERIFIED",sha256=_sha256_file(p),member_count=family.get("member_count") if family else None,missing_members=missing,extra_members=extra,errors=errors,delivered_brush_count=len(brushes),brushset_count=len(sets),xlsx_count=len(xlsx),xlsx_referenced_distinct_count=len(refs) if refs else None,final_distinct_native_brush_count=len(set(names)),full_pass=False,full_pass_reason="Real Procreate import/drawing test not executed by this structural runtime.")
-def _cli()->int:
-    ap=argparse.ArgumentParser(); sub=ap.add_subparsers(dest="cmd",required=True)
-    p=sub.add_parser("inspect-brush"); p.add_argument("file")
-    p=sub.add_parser("inspect-brushset"); p.add_argument("file")
-    p=sub.add_parser("detect-lfs"); p.add_argument("file")
-    p=sub.add_parser("resolve-lfs"); p.add_argument("file")
-    p=sub.add_parser("build-brushset"); p.add_argument("output"); p.add_argument("brushes",nargs="+"); p.add_argument("--name",default="Brush Creator Studio")
-    p=sub.add_parser("validate-family"); p.add_argument("brushset"); p.add_argument("brushes",nargs="+")
-    p=sub.add_parser("validate-zip"); p.add_argument("zip"); p.add_argument("--refs-json")
-    a=ap.parse_args()
-    if a.cmd=="inspect-brush": r=inspect_brush(a.file)
-    elif a.cmd=="inspect-brushset": r=inspect_brushset(a.file)
-    elif a.cmd=="detect-lfs": r=detect_lfs_pointer(a.file)
-    elif a.cmd=="resolve-lfs": r=resolve_lfs_asset(a.file)
-    elif a.cmd=="build-brushset": r=build_brushset(a.brushes,a.output,a.name)
-    elif a.cmd=="validate-family": r=validate_native_family(a.brushes,a.brushset)
+                        if info.filename.endswith("/") or info.filename.startswith("__MACOSX/"):
+                            continue
+                        out_zip.writestr(f"{member_id}/{info.filename}", src.read(info.filename))
+        checked = inspect_brushset(output_path)
+        checked["source_brush_names"] = [item.get("internal_name") for item in inspections]
+        return checked
+    except Exception as exc:
+        return _result("NATIVE_BUILD_FAILED", reason_code="BRUSHSET_BUILD_EXCEPTION", errors=[str(exc)])
+
+
+def validate_native_family(brushes: Sequence[PathLike], brushset: PathLike) -> Dict[str, Any]:
+    brush_results = [inspect_brush(path) for path in brushes]
+    set_result = inspect_brushset(brushset)
+    errors = []
+
+    if any(result.get("status") != "NATIVE_STRUCTURE_PASS" for result in brush_results):
+        errors.append("One or more individual .brush files failed structural validation")
+    if set_result.get("status") != "NATIVE_STRUCTURE_PASS":
+        errors.append(".brushset failed structural validation")
+
+    brush_names = [result.get("internal_name") for result in brush_results if result.get("internal_name")]
+    set_names = [member.get("internal_name") for member in set_result.get("members", []) if member.get("internal_name")]
+    brush_counter = Counter(brush_names)
+    set_counter = Counter(set_names)
+    missing = sorted((brush_counter - set_counter).elements())
+    extra = sorted((set_counter - brush_counter).elements())
+
+    if len(brush_results) != set_result.get("member_count"):
+        errors.append("Individual brush count != brushset member count")
+    if missing or extra:
+        errors.append("Individual brush names != brushset member names")
+
+    return _result(
+        "NATIVE_STRUCTURE_PASS" if not errors else "FAMILY_VALIDATION_FAILED",
+        reason_code="NATIVE_FAMILY_VALID" if not errors else "NATIVE_FAMILY_SET_MISMATCH",
+        evidence_state="VERIFIED_METADATA" if not errors else "UNVERIFIED",
+        member_count=set_result.get("member_count"),
+        missing_members=missing,
+        extra_members=extra,
+        errors=errors,
+        individual_brush_count=len(brush_results),
+        brush_names=brush_names,
+        brushset_names=set_names,
+        count_consistent=(len(brush_results) == set_result.get("member_count")),
+        name_multiset_consistent=(brush_counter == set_counter),
+    )
+
+
+def _validate_xlsx_container(path: Path) -> Tuple[bool, Optional[str]]:
+    if not zipfile.is_zipfile(path):
+        return False, "Project XLSX is not a valid OOXML ZIP container"
+    try:
+        with zipfile.ZipFile(path) as archive_zip:
+            names = set(archive_zip.namelist())
+            required = {"[Content_Types].xml", "xl/workbook.xml"}
+            missing = sorted(required - names)
+            if missing:
+                return False, f"Project XLSX missing required OOXML members: {missing}"
+    except Exception as exc:
+        return False, str(exc)
+    return True, None
+
+
+def _normalized_name_set(values: Sequence[str], label: str) -> Tuple[Optional[Set[str]], Optional[str]]:
+    if values is None:
+        return None, f"{label} is unavailable"
+    cleaned = [str(value).strip() for value in values if str(value).strip()]
+    if not cleaned:
+        return None, f"{label} is empty"
+    return set(cleaned), None
+
+
+def validate_delivery_zip(zip_path: PathLike, expected_native_brush_names: Sequence[str], xlsx_reference_names: Sequence[str]) -> Dict[str, Any]:
+    """Mandatory four-way set validation for Mode B delivery."""
+    path = Path(zip_path)
+    if not path.exists() or not zipfile.is_zipfile(path):
+        return _result("PACKAGE_VALIDATION_FAILED", reason_code="DELIVERY_ZIP_INVALID", errors=["ZIP missing or invalid"])
+
+    expected_set, expected_error = _normalized_name_set(expected_native_brush_names, "Expected Native Brush Set")
+    if expected_error:
+        return _result("PACKAGE_VALIDATION_FAILED", reason_code="EXPECTED_NATIVE_SET_UNAVAILABLE", errors=[expected_error])
+
+    refs_set, refs_error = _normalized_name_set(xlsx_reference_names, "XLSX Referenced Brush Set")
+    if refs_error:
+        return _result("PACKAGE_VALIDATION_FAILED", reason_code="XLSX_REFERENCE_SET_UNAVAILABLE", errors=[refs_error])
+
+    errors = []
+    reason_code: Optional[str] = None
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        try:
+            with zipfile.ZipFile(path) as delivery_zip:
+                delivery_zip.extractall(temp_path)
+                extracted_files = [temp_path / name for name in delivery_zip.namelist() if not name.endswith("/")]
+        except Exception as exc:
+            return _result("PACKAGE_VALIDATION_FAILED", reason_code="DELIVERY_ZIP_REOPEN_FAILED", errors=[str(exc)])
+
+        brushes = [file for file in extracted_files if file.suffix == ".brush"]
+        brushsets = [file for file in extracted_files if file.suffix == ".brushset"]
+        xlsx_files = [file for file in extracted_files if file.suffix.lower() == ".xlsx"]
+
+        if not brushes:
+            errors.append("No .brush files in delivery ZIP")
+            reason_code = reason_code or "DELIVERED_BRUSH_FILES_MISSING"
+        if len(brushsets) != 1:
+            errors.append("Delivery ZIP must contain exactly one .brushset")
+            reason_code = reason_code or "BRUSHSET_CARDINALITY_INVALID"
+        if len(xlsx_files) != 1:
+            errors.append("Delivery ZIP must contain exactly one project XLSX")
+            reason_code = reason_code or "XLSX_CARDINALITY_INVALID"
+
+        if len(xlsx_files) == 1:
+            xlsx_ok, xlsx_error = _validate_xlsx_container(xlsx_files[0])
+            if not xlsx_ok:
+                errors.append(xlsx_error or "Project XLSX structure invalid")
+                reason_code = reason_code or "XLSX_STRUCTURE_INVALID"
+
+        brush_results = [inspect_brush(brush) for brush in brushes]
+        failed_brushes = [result for result in brush_results if result.get("status") != "NATIVE_STRUCTURE_PASS"]
+        if failed_brushes:
+            errors.append("One or more delivered .brush files failed native structural validation")
+            reason_code = reason_code or "DELIVERED_BRUSH_STRUCTURE_INVALID"
+
+        delivered_names = [
+            result.get("internal_name")
+            for result in brush_results
+            if result.get("status") == "NATIVE_STRUCTURE_PASS" and result.get("internal_name")
+        ]
+        delivered_set = set(delivered_names)
+
+        if len(delivered_names) != len(brushes):
+            errors.append("One or more delivered brushes lack a validated internal name")
+            reason_code = reason_code or "DELIVERED_BRUSH_NAME_UNAVAILABLE"
+        if len(delivered_set) != len(delivered_names):
+            errors.append("Duplicate delivered brush internal names detected")
+            reason_code = reason_code or "DUPLICATE_DELIVERED_BRUSH_NAME"
+
+        family = None
+        brushset_set: Set[str] = set()
+        if brushes and len(brushsets) == 1:
+            family = validate_native_family(brushes, brushsets[0])
+            if family.get("status") != "NATIVE_STRUCTURE_PASS":
+                errors.extend(family.get("errors", []))
+                reason_code = reason_code or "NATIVE_FAMILY_SET_MISMATCH"
+            brushset_set = set(name for name in family.get("brushset_names", []) if name)
+
+        set_map = {
+            "expected_native": sorted(expected_set),
+            "delivered_brush": sorted(delivered_set),
+            "brushset_members": sorted(brushset_set),
+            "xlsx_references": sorted(refs_set),
+        }
+        set_consistent = expected_set == delivered_set == brushset_set == refs_set
+
+        if not set_consistent:
+            errors.append("Expected Native Brush Set, Delivered .brush Set, Brushset Member Set, and XLSX Referenced Brush Set are not exactly equal")
+            reason_code = reason_code or "DELIVERY_SET_MISMATCH"
+
+        return _result(
+            "PACKAGE_PASS" if not errors else "PACKAGE_VALIDATION_FAILED",
+            reason_code="FOUR_WAY_SET_CONSISTENT" if not errors else reason_code,
+            evidence_state="VERIFIED_METADATA" if not errors else "UNVERIFIED",
+            sha256=_sha256_file(path),
+            member_count=family.get("member_count") if family else None,
+            errors=errors,
+            expected_native_brush_count=len(expected_set),
+            delivered_brush_count=len(brushes),
+            delivered_distinct_name_count=len(delivered_set),
+            brushset_member_count=family.get("member_count") if family else None,
+            brushset_distinct_name_count=len(brushset_set),
+            xlsx_referenced_distinct_count=len(refs_set),
+            set_consistent=set_consistent,
+            sets=set_map,
+            full_pass=False,
+            target_software_validation="NATIVE_VALIDATION_NOT_RUN",
+            full_pass_reason="Real Procreate import/drawing test not executed by this structural runtime.",
+        )
+
+
+def _load_json_list(path: PathLike, label: str) -> Sequence[str]:
+    value = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ValueError(f"{label} must be a JSON array of brush-name strings")
+    if not value:
+        raise ValueError(f"{label} must not be empty")
+    return value
+
+
+def _cli() -> int:
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    cmd = sub.add_parser("inspect-brush")
+    cmd.add_argument("file")
+    cmd = sub.add_parser("inspect-brushset")
+    cmd.add_argument("file")
+    cmd = sub.add_parser("detect-lfs")
+    cmd.add_argument("file")
+    cmd = sub.add_parser("resolve-lfs")
+    cmd.add_argument("file")
+    cmd = sub.add_parser("build-brushset")
+    cmd.add_argument("output")
+    cmd.add_argument("brushes", nargs="+")
+    cmd.add_argument("--name", default="Brush Creator Studio")
+    cmd = sub.add_parser("validate-family")
+    cmd.add_argument("brushset")
+    cmd.add_argument("brushes", nargs="+")
+    cmd = sub.add_parser("validate-zip")
+    cmd.add_argument("zip")
+    cmd.add_argument("--expected-json", required=True)
+    cmd.add_argument("--refs-json", required=True)
+
+    args = parser.parse_args()
+
+    if args.cmd == "inspect-brush":
+        result = inspect_brush(args.file)
+    elif args.cmd == "inspect-brushset":
+        result = inspect_brushset(args.file)
+    elif args.cmd == "detect-lfs":
+        result = detect_lfs_pointer(args.file)
+    elif args.cmd == "resolve-lfs":
+        result = resolve_lfs_asset(args.file)
+    elif args.cmd == "build-brushset":
+        result = build_brushset(args.brushes, args.output, args.name)
+    elif args.cmd == "validate-family":
+        result = validate_native_family(args.brushes, args.brushset)
     else:
-        refs=json.loads(Path(a.refs_json).read_text(encoding="utf-8")) if a.refs_json else None; r=validate_delivery_zip(a.zip,refs)
-    print(json.dumps(r,ensure_ascii=False,indent=2,default=str)); return 0 if r.get("status") in {"PASS","PACKAGE_PASS","PACKAGE_STRUCTURE_PASS","NOT_LFS_POINTER"} else 2
-if __name__=="__main__": raise SystemExit(_cli())
+        try:
+            expected = _load_json_list(args.expected_json, "expected-json")
+            refs = _load_json_list(args.refs_json, "refs-json")
+            result = validate_delivery_zip(args.zip, expected, refs)
+        except Exception as exc:
+            result = _result("PACKAGE_VALIDATION_FAILED", reason_code="VALIDATION_INPUT_INVALID", errors=[str(exc)])
+
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    return 0 if result.get("status") in PASS_STATUSES else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(_cli())
