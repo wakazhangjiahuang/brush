@@ -1,4 +1,4 @@
-# Binary bridge contract: V2.0 / revision 1
+# Binary bridge contract: V2.0 / revision 2
 name: Procreate Native Bundle Bridge
 
 on:
@@ -14,6 +14,9 @@ on:
           - cartoon
           - vintage
           - mixed
+  schedule:
+    # Refresh branch-scoped binary artifacts weekly so an unexpired bridge is normally available.
+    - cron: "17 3 * * 1"
   push:
     branches:
       - main
@@ -36,7 +39,7 @@ concurrency:
 jobs:
   cartoon:
     name: Build cartoon native bundle
-    if: github.event_name == 'push' || github.event.inputs.profile == 'all' || github.event.inputs.profile == 'cartoon' || github.event.inputs.profile == 'mixed'
+    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.profile == 'all' || github.event.inputs.profile == 'cartoon' || github.event.inputs.profile == 'mixed'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -83,7 +86,7 @@ jobs:
 
   vintage:
     name: Build vintage native bundle
-    if: github.event_name == 'push' || github.event.inputs.profile == 'all' || github.event.inputs.profile == 'vintage' || github.event.inputs.profile == 'mixed'
+    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event.inputs.profile == 'all' || github.event.inputs.profile == 'vintage' || github.event.inputs.profile == 'mixed'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
