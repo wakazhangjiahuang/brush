@@ -9,7 +9,7 @@
   "kb_id": "brush-creator-studio-kb",
   "repository": "wakazhangjiahuang/brush",
   "default_branch": "main",
-  "purpose": "V2.0-compatible canonical runtime knowledge, native Procreate assets, process evidence, and delivery templates for $brush-creator-studio.",
+  "purpose": "V2.0-compatible canonical runtime knowledge, native Procreate assets, process evidence, binary materialization bridge, and delivery templates for $brush-creator-studio.",
   "verified_date": "2026-09-16",
   "entrypoints": {
     "canonical_skill": "SKILL.md",
@@ -44,6 +44,8 @@
     "Run Brush Specialization Gate and Merge Eligibility Gate before any merge.",
     "Filename, folder name, purpose_hint, and discovery hints are routing/discovery only and never validated behavior.",
     "Relevant unvalidated candidates remain PENDING_VALIDATION and may not become NEW solely because validation is unavailable.",
+    "Before native validation/build, materialize shortlisted binary candidates and the canonical XLSX to real local binary paths; direct connector text/base64 inspection alone is insufficient.",
+    "If direct binary access is unavailable, attempt the GitHub Actions binary materialization bridge declared in extensions before returning BINARY_MATERIALIZATION_UNAVAILABLE.",
     "Mode B PACKAGE_PASS requires actual final .brush files, one complete .brushset, and the project XLSX.",
     "Git LFS pointer text is not native .brushset content.",
     "Only claim FULL_PASS after real target-software import/drawing validation or equivalent validated native workflow.",
@@ -143,9 +145,36 @@
         "templates/README.md"
       ]
     },
+    "binary_materialization_bridge": {
+      "type": "github_actions_artifact",
+      "workflow_path": ".github/workflows/procreate-native-bundle.yml",
+      "helper_runtime": "runtime/binary_materialization.py",
+      "artifact_names": {
+        "cartoon": "procreate-runtime-cartoon",
+        "vintage": "procreate-runtime-vintage"
+      },
+      "mixed_strategy": "download_both",
+      "materialization_order": [
+        "DIRECT_LOCAL_PATH",
+        "GITHUB_ACTIONS_ARTIFACT",
+        "LOCAL_GIT_LFS_RESOLVE"
+      ],
+      "required_before_native_validation": true,
+      "artifact_contents": [
+        "branch individual .brush files",
+        "preferred branch .brushset with real LFS bytes",
+        "preferred brushset members pre-extracted as standalone .brush files",
+        "canonical Procreate V2 XLSX template",
+        "native asset manifest with SHA256",
+        "native runtime and materialization helper"
+      ],
+      "blocked_status": "NATIVE_OUTPUT_BLOCKED",
+      "blocked_reason_code": "BINARY_MATERIALIZATION_UNAVAILABLE"
+    },
     "native_runtime": {
       "procreate": {
         "path": "runtime/native_runtime.py",
+        "materialization_helper": "runtime/binary_materialization.py",
         "required_capabilities": [
           "detect_lfs_pointer",
           "inspect_brush",
@@ -155,6 +184,12 @@
           "build_brushset",
           "validate_native_family",
           "validate_delivery_zip"
+        ],
+        "materialization_capabilities": [
+          "extract_brush_from_brushset",
+          "extract_all_brushes_from_brushset",
+          "prepare_branch_bundle",
+          "write_asset_manifest"
         ]
       }
     },
@@ -181,6 +216,7 @@
         "analysis": true,
         "native_delivery": true,
         "native_runtime": "runtime/native_runtime.py",
+        "binary_materialization_bridge": ".github/workflows/procreate-native-bundle.yml",
         "delivery_template": "templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx"
       },
       "A": {
