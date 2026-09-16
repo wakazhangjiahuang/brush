@@ -1,49 +1,19 @@
 {
-  "schema_version": "2.1",
-  "repository_contract_version": "2.1",
+  "schema_version": "2.0",
+  "skill_version": "2.0.0",
   "skill_compatibility": {
     "name": "brush-creator-studio",
-    "minimum_version": "2.0.0"
+    "minimum_version": "2.0.0",
+    "tested_version": "2.0.0"
   },
   "kb_id": "brush-creator-studio-kb",
   "repository": "wakazhangjiahuang/brush",
   "default_branch": "main",
-  "purpose": "Manifest-driven, conditional-load, native-verifiable runtime knowledge and Procreate assets for $brush-creator-studio.",
+  "purpose": "V2.0-compatible canonical runtime knowledge, native Procreate assets, process evidence, and delivery templates for $brush-creator-studio.",
   "verified_date": "2026-09-16",
-  "source_of_truth": {
-    "runtime_router": "KB-MANIFEST.json",
-    "acceptance_and_gate": "knowledge/RUNTIME-CONTRACT.md",
-    "system_execution": "SKILL.md"
-  },
-  "mode_capability": {
-    "B": {
-      "software": "Procreate",
-      "analysis": true,
-      "native_delivery": true,
-      "native_runtime": "runtime/native_runtime.py",
-      "delivery_template": "templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx",
-      "artifact_contract": [
-        "all_final_brush_files",
-        "one_complete_brushset",
-        "one_project_workflow_xlsx",
-        "one_final_zip"
-      ]
-    },
-    "A": {
-      "software": "Photoshop",
-      "analysis": true,
-      "native_delivery": false,
-      "status_if_native_requested": "PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE",
-      "external_runtime_dependency": null
-    },
-    "AB": {
-      "analysis": true,
-      "procreate_native_delivery": true,
-      "photoshop_native_delivery": false,
-      "status_if_full_dual_native_requested": "PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE"
-    }
-  },
-  "paths": {
+  "entrypoints": {
+    "canonical_skill": "SKILL.md",
+    "start_prompt": "START-PROMPT.md",
     "artist_profile": "knowledge/ARTIST-PROFILE.json",
     "process_registry": "knowledge/PROCESS-REGISTRY.json",
     "brush_registry": "knowledge/BRUSH-REGISTRY.json",
@@ -53,70 +23,32 @@
     "complexity_rules": "knowledge/COMPLEXITY-RULES.json",
     "merge_gate": "knowledge/MERGE-GATE.md",
     "runtime_contract": "knowledge/RUNTIME-CONTRACT.md",
-    "process_dna": {
-      "cartoon": "process-dna/cartoon.json",
-      "vintage": "process-dna/vintage.json"
-    },
-    "native_runtime": "runtime/native_runtime.py",
     "procreate_workflow_template": "templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx"
   },
-  "runtime_load_policy": {
-    "bootstrap": [
-      "knowledge/RUNTIME-CONTRACT.md"
-    ],
-    "core_after_artwork_audit": [
-      "knowledge/PROCESS-STAGE-TAXONOMY.json",
-      "knowledge/MATERIAL-TAXONOMY.json",
-      "knowledge/COMPLEXITY-RULES.json",
-      "knowledge/MERGE-GATE.md"
-    ],
-    "branch_conditional": {
-      "cartoon": [
-        "process-dna/cartoon.json"
-      ],
-      "vintage": [
-        "process-dna/vintage.json"
-      ],
-      "mixed": [
-        "process-dna/cartoon.json",
-        "process-dna/vintage.json"
-      ],
-      "unknown": []
-    },
-    "profile_conditional": {
-      "paths": [
-        "knowledge/ARTIST-PROFILE.json"
-      ],
-      "load_when": "Only after current artwork and selected Process DNA when a persistent workflow baseline is still needed."
-    },
-    "process_evidence_conditional": [
-      "knowledge/PROCESS-REGISTRY.json"
-    ],
-    "candidate_conditional": [
-      "knowledge/BRUSH-REGISTRY.json",
-      "knowledge/BRUSH-CAPABILITY-REGISTRY.json"
-    ],
-    "candidate_native_policy": {
-      "max_shortlist_per_role": 3,
-      "preferred_order": [
-        "VERIFIED_OR_VERIFIED_METADATA_CAPABILITY",
-        "SAME_BRANCH_INDIVIDUAL_BRUSH",
-        "NATIVE_METADATA_READABLE_CANDIDATE",
-        "SHORTLISTED_BRUSHSET_MEMBER",
-        "DERIVE_OR_NEW"
-      ]
-    },
-    "delivery_only": {
-      "B": [
-        "templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx"
-      ]
-    },
-    "never_runtime": [
-      "README.md",
-      "START-PROMPT.md",
-      "templates/README.md"
-    ]
+  "process_dna": {
+    "cartoon": "process-dna/cartoon.json",
+    "vintage": "process-dna/vintage.json"
   },
+  "source_directories": {
+    "artist_process": "插画师/",
+    "brush_assets": "笔刷/",
+    "delivery_templates": "templates/"
+  },
+  "resolver_policy": [
+    "Read this manifest before resolving reusable brush/process data.",
+    "Current user artwork is the highest-priority project evidence.",
+    "Resolve exact repository paths from registries; do not guess binary asset paths.",
+    "Perform Full Production Stage Decomposition and Object/Material Map before Brush Role clustering.",
+    "Optimize for Minimal Complete Production Set, not minimum brush count.",
+    "A normal complete illustration with fewer than 8 final roles triggers UNDERCOVERAGE_REVIEW_REQUIRED unless full coverage is defensibly demonstrated.",
+    "Run Brush Specialization Gate and Merge Eligibility Gate before any merge.",
+    "Filename, folder name, purpose_hint, and discovery hints are routing/discovery only and never validated behavior.",
+    "Relevant unvalidated candidates remain PENDING_VALIDATION and may not become NEW solely because validation is unavailable.",
+    "Mode B PACKAGE_PASS requires actual final .brush files, one complete .brushset, and the project XLSX.",
+    "Git LFS pointer text is not native .brushset content.",
+    "Only claim FULL_PASS after real target-software import/drawing validation or equivalent validated native workflow.",
+    "V2.0 canonical fields are sufficient for repository parsing; extensions are optional optimizations and must not be required for basic V2.0 operation."
+  ],
   "routing": {
     "artwork_priority": [
       "CURRENT_ARTWORK",
@@ -148,35 +80,122 @@
       "preferred_brushset": "笔刷/套装笔刷/田心水彩笔刷59支——复古类 1.brushset"
     }
   },
-  "native_runtime": {
-    "procreate": {
-      "path": "runtime/native_runtime.py",
-      "required_capabilities": [
-        "detect_lfs_pointer",
-        "inspect_brush",
-        "inspect_brushset",
-        "resolve_lfs_asset",
-        "derive_or_build_brush",
-        "build_brushset",
-        "validate_native_family",
-        "validate_delivery_zip"
+  "extensions": {
+    "source_of_truth": {
+      "runtime_router": "KB-MANIFEST.json",
+      "acceptance_and_gate": "knowledge/RUNTIME-CONTRACT.md",
+      "system_execution": "SKILL.md"
+    },
+    "runtime_load_policy": {
+      "bootstrap": [
+        "knowledge/RUNTIME-CONTRACT.md"
+      ],
+      "core_after_artwork_audit": [
+        "knowledge/PROCESS-STAGE-TAXONOMY.json",
+        "knowledge/MATERIAL-TAXONOMY.json",
+        "knowledge/COMPLEXITY-RULES.json",
+        "knowledge/MERGE-GATE.md"
+      ],
+      "branch_conditional": {
+        "cartoon": [
+          "process-dna/cartoon.json"
+        ],
+        "vintage": [
+          "process-dna/vintage.json"
+        ],
+        "mixed": [
+          "process-dna/cartoon.json",
+          "process-dna/vintage.json"
+        ],
+        "unknown": []
+      },
+      "profile_conditional": {
+        "paths": [
+          "knowledge/ARTIST-PROFILE.json"
+        ],
+        "load_when": "Only after current artwork and selected Process DNA when a persistent workflow baseline is still needed."
+      },
+      "process_evidence_conditional": [
+        "knowledge/PROCESS-REGISTRY.json"
+      ],
+      "candidate_conditional": [
+        "knowledge/BRUSH-REGISTRY.json",
+        "knowledge/BRUSH-CAPABILITY-REGISTRY.json"
+      ],
+      "candidate_native_policy": {
+        "max_shortlist_per_role": 3,
+        "preferred_order": [
+          "VERIFIED_OR_VERIFIED_METADATA_CAPABILITY",
+          "SAME_BRANCH_INDIVIDUAL_BRUSH",
+          "NATIVE_METADATA_READABLE_CANDIDATE",
+          "SHORTLISTED_BRUSHSET_MEMBER",
+          "DERIVE_OR_NEW"
+        ]
+      },
+      "delivery_only": {
+        "B": [
+          "templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx"
+        ]
+      },
+      "never_runtime": [
+        "README.md",
+        "START-PROMPT.md",
+        "templates/README.md"
       ]
-    }
-  },
-  "lfs_policy": {
-    "detect_pointer_before_native_inspection": true,
-    "pointer_is_native_file": false,
-    "resolve_only_for_shortlisted_candidate": true,
-    "prefer_individual_brush_before_large_brushset": true,
-    "blocked_status": "LFS_RESOLUTION_BLOCKED"
-  },
-  "artifact_contract": {
-    "B": {
-      "all_final_brush_files": true,
-      "one_complete_brushset": true,
-      "one_project_workflow_xlsx": true,
-      "one_final_zip": true,
-      "count_consistency_required": true
+    },
+    "native_runtime": {
+      "procreate": {
+        "path": "runtime/native_runtime.py",
+        "required_capabilities": [
+          "detect_lfs_pointer",
+          "inspect_brush",
+          "inspect_brushset",
+          "resolve_lfs_asset",
+          "derive_or_build_brush",
+          "build_brushset",
+          "validate_native_family",
+          "validate_delivery_zip"
+        ]
+      }
+    },
+    "lfs_policy": {
+      "detect_pointer_before_native_inspection": true,
+      "pointer_is_native_file": false,
+      "resolve_only_for_shortlisted_candidate": true,
+      "prefer_individual_brush_before_large_brushset": true,
+      "blocked_status": "LFS_RESOLUTION_BLOCKED"
+    },
+    "artifact_contract": {
+      "B": {
+        "all_final_brush_files": true,
+        "one_complete_brushset": true,
+        "one_project_workflow_xlsx": true,
+        "one_final_zip": true,
+        "count_consistency_required": true,
+        "set_consistency_required": true
+      }
+    },
+    "mode_capability": {
+      "B": {
+        "software": "Procreate",
+        "analysis": true,
+        "native_delivery": true,
+        "native_runtime": "runtime/native_runtime.py",
+        "delivery_template": "templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx"
+      },
+      "A": {
+        "software": "Photoshop",
+        "analysis": true,
+        "native_delivery": false,
+        "status_if_native_requested": "PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE",
+        "external_runtime_dependency": null
+      },
+      "AB": {
+        "analysis": true,
+        "procreate_native_delivery": true,
+        "photoshop_native_delivery": false,
+        "status_if_full_dual_native_requested": "PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE"
+      }
     }
   }
 }
