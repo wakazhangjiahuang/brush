@@ -1,19 +1,24 @@
-# Runtime Contract — $brush-creator-studio Repository V2.1
+# Runtime Contract — $brush-creator-studio V2.0.0
 
-This file is the **single Acceptance / Gate Source** for the GitHub runtime.  
-`SKILL.md` defines execution order; `KB-MANIFEST.json` defines routing and paths. Other files must not redefine these gates.
+This file is the **single Acceptance / Gate Source** for the repository runtime.
+
+- `SKILL.md` defines the V2.0 execution chain and failure behavior.
+- `KB-MANIFEST.json` defines V2.0 canonical routes plus optional extensions.
+- Other documentation must not redefine acceptance gates.
 
 ## 1. Evidence states
-- `VERIFIED` — real Procreate/Photoshop import/drawing validation or equivalent validated target-software workflow.
+
+- `VERIFIED` — real target-software import/drawing validation or an equivalent validated target-software workflow.
 - `VERIFIED_METADATA` — native package/metadata structurally parsed and tied to a source hash; not hand-tested.
 - `INFERRED` — supported by artwork/process evidence, not native-tested.
-- `PROPOSED` — recommended setting/role/build change.
+- `PROPOSED` — recommended role/setting/build change.
 - `UNVERIFIED` — insufficient evidence.
 
-Discovery-only state:
+Discovery state:
 - `PENDING_VALIDATION`
 
-## 2. Runtime status codes
+## 2. Canonical runtime statuses
+
 Knowledge / routing:
 - `KB_UNAVAILABLE`
 - `KB_INCOMPLETE`
@@ -28,7 +33,9 @@ Candidate / quantity:
 - `QUANTITY_DECISION_BLOCKED`
 - `UNDERCOVERAGE_REVIEW_REQUIRED`
 
-Native:
+Native / package:
+- `NATIVE_METADATA_PASS`
+- `NATIVE_STRUCTURE_PASS`
 - `LFS_POINTER`
 - `LFS_RESOLUTION_BLOCKED`
 - `NATIVE_OUTPUT_BLOCKED`
@@ -41,8 +48,15 @@ Native:
 - `PACKAGE_PASS`
 - `FULL_PASS`
 
-## 3. Quantity hard gate
-`FINAL_COUNT` is allowed only after all of the following pass:
+Technical implementation details must use `reason_code` and `errors`; do not create ad-hoc top-level statuses for every parser error.
+
+Examples:
+- `status = NATIVE_OUTPUT_BLOCKED`, `reason_code = INVALID_BRUSH_STRUCTURE`
+- `status = PACKAGE_VALIDATION_FAILED`, `reason_code = XLSX_REFERENCE_SET_UNAVAILABLE`
+
+## 3. FINAL_COUNT hard gate
+
+`FINAL_COUNT` is allowed only after all pass:
 1. Process Stage Coverage
 2. Material Coverage
 3. Object-specific Coverage
@@ -57,95 +71,144 @@ Native:
 Complexity bands are QA triggers, not minimum brush quotas.
 
 ## 4. Required Role rule
-Each `REQUIRED` Brush Role must have exactly one defensible route:
-- **A. Independent Native Brush**, or
-- **B. Explicit `MERGE_PASS` → Shared Native Brush**.
 
-The run must output a `ROLE_TO_NATIVE_MATRIX` containing at least:
+Each `REQUIRED` Brush Role must have exactly one defensible route:
+- **Independent Native Brush**, or
+- **Explicit `MERGE_PASS` → Shared Native Brush**.
+
+Every run must output `ROLE_TO_NATIVE_MATRIX` containing at least:
 `role_id / stage / object_material / native_brush_name / classification / merge_state / merge_target / evidence_state`.
 
 `Role Count >= Distinct Native Brush Count`.
 
-If compression is large (for example 14 Roles → 3 Brushes), every collapsed Role must carry its own `MERGE_PASS` evidence. Any missing merge evidence returns `UNDERCOVERAGE_REVIEW_REQUIRED`.
+If compression is large, every collapsed Role must carry its own `MERGE_PASS` evidence. Missing merge evidence returns `UNDERCOVERAGE_REVIEW_REQUIRED`.
 
 ## 5. Candidate validation gate
-- Filename / `purpose_hint` never establishes native behavior.
-- `PENDING_VALIDATION` must not be converted to `NEW` solely because native inspection is unavailable.
-- Prefer `BRUSH-CAPABILITY-REGISTRY.json` records whose source hash still matches.
-- If a candidate source hash changed, its prior capability record is stale until revalidated.
-- Shortlist native validation is preferred over full-library scanning.
+
+- Filename / folder / `purpose_hint` never establishes native behavior.
+- `PENDING_VALIDATION` must not become `NEW` solely because native inspection is unavailable.
+- Prefer `BRUSH-CAPABILITY-REGISTRY.json` entries whose source hashes still match.
+- A changed source hash invalidates prior capability evidence until revalidated.
+- Validate shortlisted candidates instead of scanning full libraries.
 
 ## 6. Git LFS gate
+
 A Git LFS pointer is not a native `.brushset`.
 
-Before inspection, detect pointer text.  
-Resolve LFS only when the shortlisted candidate can materially affect Role coverage/quantity.  
-If resolution is unavailable, return `LFS_RESOLUTION_BLOCKED` and keep the candidate `PENDING_VALIDATION` when relevant.
+Detect pointer text before native inspection. Resolve LFS only when the shortlisted candidate can materially affect Role coverage/quantity.
 
-## 7. Native Build gate — Mode B
-Mode B build order:
+If resolution is unavailable:
+- `status = LFS_RESOLUTION_BLOCKED`
+- keep the candidate `PENDING_VALIDATION` when relevant.
+
+## 7. Individual `.brush` structure gate
+
+A `.brush` may reach `NATIVE_STRUCTURE_PASS` only when:
+- the file is a ZIP-based native package;
+- `Brush.archive` exists and is parseable;
+- internal brush name can be read when present;
+- explicit Shape / Grain / Texture file references found in the archive resolve to actual package members.
+
+If an explicit required native resource reference is missing:
+- `status = NATIVE_OUTPUT_BLOCKED`
+- `reason_code = MISSING_REFERENCED_NATIVE_RESOURCE`
+
+Absence of an explicit file reference does **not** prove drawing behavior; it only means no missing referenced resource was detected.
+
+## 8. `.brushset` structure gate
+
+A `.brushset` may reach `NATIVE_STRUCTURE_PASS` only when:
+- `brushset.plist` exists and parses;
+- declared member IDs have `Brush.archive` packages;
+- `missing_members` is empty;
+- `extra_members` is empty.
+
+Any missing **or extra** member fails validation:
+- `status = NATIVE_OUTPUT_BLOCKED`
+- `reason_code = BRUSHSET_MEMBER_SET_MISMATCH`
+
+## 9. Native Build gate — Mode B
+
+Required order:
 1. Final/Provisional Role Set
-2. Build/copy every distinct final `.brush`
-3. Build one complete `.brushset`
-4. Validate native family
-5. Load canonical V2 XLSX template
-6. Generate project XLSX using actual delivered brush names
-7. Build final ZIP
-8. Reopen ZIP and validate again
+2. `ROLE_TO_NATIVE_MATRIX`
+3. Build/copy every distinct final `.brush`
+4. Build one complete `.brushset`
+5. Validate native family
+6. Load canonical V2 XLSX template
+7. Generate project XLSX using actual delivered brush names
+8. Build final ZIP
+9. Reopen ZIP and validate again
 
-Do not create XLSX first and “fill in” brushes later.
+Do not create XLSX first and fill native files later.
 
-`runtime/native_runtime.py` is the canonical Procreate native structure runtime. If its structural checks fail, natural-language reasoning cannot override the failure.
+`runtime/native_runtime.py` is the canonical Procreate native structure runtime. Machine-readable failure cannot be overridden by prose.
 
-## 8. Native family count consistency
-Before `PACKAGE_PASS`, all of these counts must agree:
+## 10. Four-way delivery set consistency
 
-`Delivered Individual Brush Count`
+`validate_delivery_zip()` must receive both:
+- **Expected Native Brush Set** — derived from `ROLE_TO_NATIVE_MATRIX`;
+- **XLSX Referenced Brush Set** — extracted/validated from the project workbook.
+
+Before `PACKAGE_PASS`, exact set equality is required:
+
+`Expected Native Brush Set`
 =
-`Brushset Member Count`
+`Delivered .brush Set`
 =
-`XLSX Referenced Distinct Brush Count`
+`Brushset Member Set`
 =
-`Final Distinct Native Brush Count`
+`XLSX Referenced Brush Set`
 
-The brush names must also match; count equality alone is insufficient.
+Count equality alone is insufficient.
 
-Any mismatch returns `PACKAGE_VALIDATION_FAILED`.
+XLSX reference validation is mandatory. If the reference set cannot be extracted or validated:
+- `status = PACKAGE_VALIDATION_FAILED`
+- `reason_code = XLSX_REFERENCE_SET_UNAVAILABLE`
 
-## 9. Mode B artifact contract
+Any set mismatch:
+- `status = PACKAGE_VALIDATION_FAILED`
+- `reason_code = DELIVERY_SET_MISMATCH`
+
+## 11. Mode B artifact contract
+
 Final ZIP must contain:
-- every final native `.brush`;
+- every expected final native `.brush`;
 - exactly one complete final `.brushset`;
 - exactly one project workflow XLSX derived from `templates/Procreate/Procreate新笔刷绘画操作流程_V2.xlsx`.
 
-Forbidden package states include:
+Forbidden states:
 - XLSX without `.brush`;
 - `.brush` without `.brushset`;
-- `.brushset` missing any final brush;
-- XLSX referencing a non-delivered brush;
+- `.brushset` missing or adding unexpected native brushes;
+- XLSX referencing a non-expected/non-delivered brush;
 - placeholder brush names;
 - renamed fake native files.
 
-## 10. PACKAGE PASS vs FULL PASS
+## 12. PACKAGE_PASS vs FULL_PASS
+
 `PACKAGE_PASS` means:
-- native ZIP/package structures parsed successfully;
-- native family membership/count/name checks pass;
-- project XLSX exists and references only delivered brush names;
-- final ZIP reopens and passes structure/count validation.
+- individual native package structures pass;
+- native family member names and sets pass;
+- expected/delivered/brushset/XLSX sets are exactly equal;
+- final ZIP reopens and passes validation.
 
-`PACKAGE_PASS` does **not** prove Procreate drawing feel or import success.
+`PACKAGE_PASS` does **not** prove Procreate import success or drawing feel.
 
-`FULL_PASS` additionally requires a real target-software import/drawing test. If not run, report `NATIVE_VALIDATION_NOT_RUN` alongside structural results and do not claim FULL PASS.
+`FULL_PASS` additionally requires a real target-software import/drawing test. If not run, report `NATIVE_VALIDATION_NOT_RUN` in the validation details and never claim `FULL_PASS`.
 
-## 11. Mode A / AB boundary
-The current repository does not contain an equivalent Photoshop `.abr` builder, Photoshop delivery template, or Photoshop native asset branch.
+## 13. Mode A / AB boundary
 
-Unless `KB-MANIFEST.json` explicitly declares a working external Photoshop native runtime dependency:
+This repository does not currently contain an equivalent Photoshop `.abr` native builder, delivery template, or native asset branch.
+
+Unless the Manifest explicitly declares a working external Photoshop native runtime:
 - Mode A native delivery → `PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE`
 - Mode AB full dual-native delivery → `PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE`
 
-Analysis may continue, but `.abr` must not be fabricated.
+Analysis may continue. `.abr` must not be fabricated.
 
-## 12. Acceptance invariant
-No prose claim can override machine-readable native runtime output.  
-When machine validation and narrative reasoning disagree, the machine validation status controls package acceptance.
+## 14. Acceptance invariant
+
+No prose claim overrides machine-readable runtime output.
+
+When narrative reasoning and runtime validation disagree, runtime validation controls package acceptance.
