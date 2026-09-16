@@ -48,9 +48,10 @@ Native / package:
 - `PACKAGE_PASS`
 - `FULL_PASS`
 
-Technical implementation details must use `reason_code` and `errors`; do not create ad-hoc top-level statuses for every parser error.
+Technical implementation details must use `reason_code` and `errors`; do not create ad-hoc top-level statuses for every parser/transport error.
 
 Examples:
+- `status = NATIVE_OUTPUT_BLOCKED`, `reason_code = BINARY_MATERIALIZATION_UNAVAILABLE`
 - `status = NATIVE_OUTPUT_BLOCKED`, `reason_code = INVALID_BRUSH_STRUCTURE`
 - `status = PACKAGE_VALIDATION_FAILED`, `reason_code = XLSX_REFERENCE_SET_UNAVAILABLE`
 
@@ -91,17 +92,48 @@ If compression is large, every collapsed Role must carry its own `MERGE_PASS` ev
 - A changed source hash invalidates prior capability evidence until revalidated.
 - Validate shortlisted candidates instead of scanning full libraries.
 
-## 6. Git LFS gate
+Candidate validation is not complete until the candidate has a real local binary path or an already-valid hash-bound capability record whose binary is not required for the current output operation.
+
+## 6. Binary Materialization Gate — Mode B
+
+Before native inspection, derivation, build, or template use, all decision-critical binary assets must exist as real local files:
+- shortlisted `.brush` candidates that may become KEEP / ADJUST / DERIVE bases;
+- routed `.brushset` assets when shortlisted members are needed;
+- the canonical Procreate V2 XLSX template.
+
+Connector text, metadata, a base64 preview, a repository path string, or a Git LFS pointer does **not** satisfy this gate.
+
+Materialization order:
+1. an already-real local file path;
+2. the GitHub Actions artifact bridge declared by `KB-MANIFEST.json > extensions.binary_materialization_bridge`;
+3. local Git LFS resolution inside a real checkout, only for the required routed asset.
+
+The bridge artifact should provide branch-scoped binary bundles and a SHA256 manifest. For preferred brushsets it should also pre-extract declared members into standalone `.brush` files so hash-bound Capability Registry entries can become usable build bases without requiring the calling environment to re-fetch member bytes.
+
+For `mixed`, both branch artifacts may be required.
+
+Only after all declared materialization routes fail may the run return:
+- `status = NATIVE_OUTPUT_BLOCKED`
+- `reason_code = BINARY_MATERIALIZATION_UNAVAILABLE`
+
+If an artifact is downloaded but its expected binary file is missing, corrupt, still a Git LFS pointer, or SHA-mismatched:
+- `status = NATIVE_OUTPUT_BLOCKED`
+- `reason_code = BINARY_MATERIALIZATION_INTEGRITY_FAILED`
+
+`BINARY_MATERIALIZATION_UNAVAILABLE` is therefore a terminal fallback, not the first response to connector binary limitations.
+
+## 7. Git LFS gate
 
 A Git LFS pointer is not a native `.brushset`.
 
-Detect pointer text before native inspection. Resolve LFS only when the shortlisted candidate can materially affect Role coverage/quantity.
+Detect pointer text before native inspection. Resolve LFS only when the shortlisted candidate can materially affect Role coverage/quantity, unless the branch artifact bridge has already supplied the real binary.
 
-If resolution is unavailable:
+If local LFS resolution is attempted and unavailable:
 - `status = LFS_RESOLUTION_BLOCKED`
-- keep the candidate `PENDING_VALIDATION` when relevant.
+- keep the candidate `PENDING_VALIDATION` when relevant;
+- if the GitHub Actions bridge is declared and has not yet been attempted, attempt it before converting the run to terminal binary-materialization failure.
 
-## 7. Individual `.brush` structure gate
+## 8. Individual `.brush` structure gate
 
 A `.brush` may reach `NATIVE_STRUCTURE_PASS` only when:
 - the file is a ZIP-based native package;
@@ -115,7 +147,7 @@ If an explicit required native resource reference is missing:
 
 Absence of an explicit file reference does **not** prove drawing behavior; it only means no missing referenced resource was detected.
 
-## 8. `.brushset` structure gate
+## 9. `.brushset` structure gate
 
 A `.brushset` may reach `NATIVE_STRUCTURE_PASS` only when:
 - `brushset.plist` exists and parses;
@@ -127,24 +159,31 @@ Any missing **or extra** member fails validation:
 - `status = NATIVE_OUTPUT_BLOCKED`
 - `reason_code = BRUSHSET_MEMBER_SET_MISMATCH`
 
-## 9. Native Build gate — Mode B
+If a brushset member is selected for KEEP / ADJUST / DERIVE, it must be materialized as a standalone `.brush` before `derive_or_build_brush()` is called. The repository helper for this is `runtime/binary_materialization.py`.
+
+## 10. Native Build gate — Mode B
 
 Required order:
 1. Final/Provisional Role Set
 2. `ROLE_TO_NATIVE_MATRIX`
-3. Build/copy every distinct final `.brush`
-4. Build one complete `.brushset`
-5. Validate native family
-6. Load canonical V2 XLSX template
-7. Generate project XLSX using actual delivered brush names
-8. Build final ZIP
-9. Reopen ZIP and validate again
+3. Binary Materialization Gate
+4. Native candidate inspection / classification
+5. Build/copy every distinct final `.brush`
+6. Build one complete `.brushset`
+7. Validate native family
+8. Load canonical V2 XLSX template from a real local binary path
+9. Generate project XLSX using actual delivered brush names
+10. Build final ZIP
+11. Reopen ZIP and validate again
 
 Do not create XLSX first and fill native files later.
 
-`runtime/native_runtime.py` is the canonical Procreate native structure runtime. Machine-readable failure cannot be overridden by prose.
+`runtime/native_runtime.py` is the canonical Procreate native structure/build/package validator.
+`runtime/binary_materialization.py` is the transport/extraction helper.
 
-## 10. Four-way delivery set consistency
+Machine-readable failure cannot be overridden by prose.
+
+## 11. Four-way delivery set consistency
 
 `validate_delivery_zip()` must receive both:
 - **Expected Native Brush Set** — derived from `ROLE_TO_NATIVE_MATRIX`;
@@ -170,7 +209,7 @@ Any set mismatch:
 - `status = PACKAGE_VALIDATION_FAILED`
 - `reason_code = DELIVERY_SET_MISMATCH`
 
-## 11. Mode B artifact contract
+## 12. Mode B artifact contract
 
 Final ZIP must contain:
 - every expected final native `.brush`;
@@ -183,11 +222,14 @@ Forbidden states:
 - `.brushset` missing or adding unexpected native brushes;
 - XLSX referencing a non-expected/non-delivered brush;
 - placeholder brush names;
-- renamed fake native files.
+- renamed fake native files;
+- a Git LFS pointer substituted for an actual `.brushset`;
+- a bridge artifact declared ready while required branch binaries are absent.
 
-## 12. PACKAGE_PASS vs FULL_PASS
+## 13. PACKAGE_PASS vs FULL_PASS
 
 `PACKAGE_PASS` means:
+- required source/template binaries were successfully materialized;
 - individual native package structures pass;
 - native family member names and sets pass;
 - expected/delivered/brushset/XLSX sets are exactly equal;
@@ -197,9 +239,9 @@ Forbidden states:
 
 `FULL_PASS` additionally requires a real target-software import/drawing test. If not run, report `NATIVE_VALIDATION_NOT_RUN` in the validation details and never claim `FULL_PASS`.
 
-## 13. Mode A / AB boundary
+## 14. Mode A / AB boundary
 
-This repository does not currently contain an equivalent Photoshop `.abr` native builder, delivery template, or native asset branch.
+This repository does not currently contain an equivalent Photoshop `.abr` native builder, delivery template, native asset branch, or binary bridge.
 
 Unless the Manifest explicitly declares a working external Photoshop native runtime:
 - Mode A native delivery → `PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE`
@@ -207,7 +249,7 @@ Unless the Manifest explicitly declares a working external Photoshop native runt
 
 Analysis may continue. `.abr` must not be fabricated.
 
-## 14. Acceptance invariant
+## 15. Acceptance invariant
 
 No prose claim overrides machine-readable runtime output.
 
