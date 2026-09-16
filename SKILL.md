@@ -1,110 +1,174 @@
 ---
 name: brush-creator-studio
-description: Build and validate evidence-bound Procreate brush systems from current artwork using a Manifest-driven remote knowledge base, conditional candidate retrieval, native structure validation, and package count-consistency checks.
+description: Create, validate, optimize, and package evidence-bound Procreate/Photoshop brush systems from current artwork plus the persistent GitHub brush knowledge base, with complete production-stage coverage, material-aware roles, native delivery checks, and project workflow documentation.
 ---
 
-# $brush-creator-studio — Repository Runtime Contract Adapter
+# $brush-creator-studio V2.0.0
 
 ## 1. Purpose
-This repository-side `SKILL.md` defines only execution order, decision boundaries, and failure behavior.  
-Concrete paths and load policy come from `KB-MANIFEST.json`. Acceptance criteria and status codes come only from `knowledge/RUNTIME-CONTRACT.md`.
 
-Optimization target: **Minimal Complete Production Set** — complete production coverage without redundant brushes. Never optimize for “the fewest possible brushes”.
+`$brush-creator-studio` converts current artwork into a production-ready brush system. The optimization target is **Minimal Complete Production Set**: complete stage/material/object coverage with no unjustified duplication or over-merging.
 
-## 2. Manifest-first boot
+The current artwork is always the highest-priority project evidence.
+
+Modes:
+- **A = Photoshop** — analysis is supported; native `.abr` delivery requires an explicitly available Photoshop native runtime.
+- **B = Procreate** — `.brush` + `.brushset` native delivery through the repository runtime.
+- **AB = Dual analysis** — shares Artist Profile + Brush DNA; Procreate native delivery is available, Photoshop native delivery follows the capability boundary below.
+
+## 2. V2.0 Manifest-first repository resolver
+
+Repository: `wakazhangjiahuang/brush`.
+
 For every run:
-1. Read only `KB-MANIFEST.json`.
-2. Verify requested mode against `mode_capability`.
-3. Follow `runtime_load_policy`; do not scan the full repository.
-4. Current artwork is the highest-priority project evidence.
-5. Do not request repository-resident assets from the user again unless the routed asset is unavailable.
+1. Read `KB-MANIFEST.json` first.
+2. Resolve the V2.0 canonical fields: `entrypoints`, `process_dna`, `source_directories`, `resolver_policy`, and `routing`.
+3. The optional `extensions` object may optimize conditional loading, native runtime, LFS handling, and artifact QA, but V2.0 execution must not depend on understanding those extensions.
+4. Do not scan the full repository at startup.
+5. Do not ask the user to re-upload repository-resident assets unless the exact routed asset cannot be resolved.
 
-`README.md`, `START-PROMPT.md`, `templates/README.md`, Git history, migration notes, and static reports are not runtime knowledge sources.
+`knowledge/RUNTIME-CONTRACT.md` is the single Acceptance/Gate Source.
 
-## 3. Conditional execution chain
-`BOOT / Manifest`
-→ `Current Artwork Audit`
-→ `Artwork Complexity + Branch Routing`
-→ `Core Rule Load`
-→ `Stage Decomposition`
+## 3. Required V2.0 execution chain
+
+`Current Artwork Audit`
+→ `Artwork Complexity Profile`
+→ `Style / Color / Material DNA`
+→ `Full Production Stage Decomposition`
+→ `Process DNA`
 → `Object / Material Map`
 → `Brush Role Inventory`
-→ `Selected Process DNA`
-→ `Candidate Registry Match`
-→ `Shortlist Native Validation`
+→ `Required Role Coverage Matrix`
+→ `Existing Brush Matching`
+→ `Native Metadata / Capability Validation`
 → `KEEP / ADJUST / DERIVE / NEW`
-→ `Specialization`
-→ `Merge`
-→ `Redundancy / Undercoverage`
+→ `Brush Specialization Gate`
+→ `Merge Eligibility Gate`
+→ `Redundancy Check`
+→ `Undercoverage Review`
+→ `Complexity Sanity Check`
 → `Dynamic Quantity Decision`
 → `ROLE_TO_NATIVE_MATRIX`
-→ `Native Build`
-→ `XLSX`
-→ `Delivery QA`
+→ `Native Brush Build`
+→ `Native Delivery Gate`
+→ `Project-specific XLSX`
+→ `QA`
 → `ZIP`
 
-Do not load brush binaries, process videos, or the XLSX template during BOOT.
+Do not finalize quantity before Redundancy + Undercoverage + Complexity Sanity.
 
-## 4. Artwork and process routing
+## 4. Production stages, materials, and roles
+
+Use the manifest entrypoints for:
+- `PROCESS-STAGE-TAXONOMY.json`
+- `MATERIAL-TAXONOMY.json`
+- `COMPLEXITY-RULES.json`
+- `MERGE-GATE.md`
+
+Each applicable production stage must be classified `REQUIRED / OPTIONAL / NOT_APPLICABLE`.
+
+Separate:
+`Production Stage → Required Behavior → Brush Role → Candidate → Delivered Native Brush`.
+
+A visible specialist behavior (fur, dry brush, wet bleed, cloth, grain, foliage, decorative smooth line, fine cleanup, etc.) must not disappear merely because a general brush can technically approximate it.
+
+## 5. Process routing
+
 Priority:
 `CURRENT_ARTWORK > SELECTED_PROCESS_DNA > ARTIST_PROFILE`.
 
-Choose `cartoon`, `vintage`, `mixed`, or `unknown` from current artwork evidence. Load only the selected Process DNA.  
-Use `PROCESS-REGISTRY.json` process media only when artwork evidence is insufficient, conflicts with Process DNA, or a specific real workflow step must be confirmed.
+Use `process_dna.cartoon` or `process_dna.vintage` from the V2.0 Manifest. For mixed work, inspect only the needed branch baselines.
 
-## 5. Brush candidate retrieval
+Use `PROCESS-REGISTRY.json` media only when:
+- current artwork evidence is insufficient;
+- Process DNA conflicts with the artwork;
+- a specific real workflow stage must be confirmed.
+
+Process DNA is a baseline, not a replacement for the current artwork.
+
+## 6. Candidate retrieval and native evidence
+
 After required Brush Roles exist:
-1. Read `BRUSH-REGISTRY.json` for discovery.
-2. Read `BRUSH-CAPABILITY-REGISTRY.json` for reusable native evidence.
-3. Shortlist at most the Manifest-defined candidate limit per Role.
-4. Prefer verified capability records and individual `.brush` files before large LFS `.brushset` assets.
-5. Resolve/inspect only shortlisted native files.
+1. Resolve `entrypoints.brush_registry`.
+2. Resolve `entrypoints.brush_capability_registry`.
+3. Prefer capability records whose source hashes still match.
+4. Shortlist the best candidates per Role; when Manifest extensions are understood, honor the configured maximum (currently 3).
+5. Prefer suitable individual `.brush` candidates before downloading large LFS `.brushset` assets.
+6. Inspect only shortlisted native candidates.
 
-Filename, `purpose_hint`, folder name, or declared set count are discovery hints only.
+Filename, folder name, `purpose_hint`, and discovery hints are not VERIFIED capability evidence.
 
-## 6. Native evidence and classification
-Use evidence states from the Runtime Contract.  
-A candidate that has not been sufficiently inspected remains `PENDING_VALIDATION`; lack of access is not evidence for `NEW`.
+An unvalidated relevant candidate remains `PENDING_VALIDATION`; lack of native access does not justify `NEW`.
 
-Decide `KEEP / ADJUST / DERIVE / NEW` only after shortlist validation.
+## 7. Classification, specialization, Merge, and undercoverage
 
-## 7. Specialization, Merge, and undercoverage
-Run specialization before Merge.  
-Apply `knowledge/MERGE-GATE.md`; technical ability to paint two tasks is not sufficient merge evidence.
+Decide `KEEP / ADJUST / DERIVE / NEW` only after relevant candidate validation.
+
+Run **Specialization before Merge**.
 
 Every REQUIRED Brush Role must map to:
 - an independent Native Brush; or
 - an explicit `MERGE_PASS` pointing to a shared Native Brush.
 
-Always produce `ROLE_TO_NATIVE_MATRIX`. A large Role-to-brush compression requires explicit merge evidence for every collapsed Role. Missing merge evidence triggers `UNDERCOVERAGE_REVIEW_REQUIRED`.
+Always output `ROLE_TO_NATIVE_MATRIX`.
 
-Complexity bands are QA triggers, never fixed quantity targets.
+Large compression (for example 14 roles → 3 native brushes) requires explicit merge evidence for every collapsed role. Missing evidence triggers `UNDERCOVERAGE_REVIEW_REQUIRED`.
 
-## 8. Native runtime
-For Mode B use only `runtime/native_runtime.py` for Procreate structural inspection/build/package validation when execution is available.
+Complexity bands are QA triggers, never fixed brush-count targets.
 
-Git LFS pointer text is not native brush data. Resolve LFS only for shortlisted candidates that materially affect the decision.
+## 8. Procreate native runtime
 
-Do not fake `.brush`, `.brushset`, or `.abr` by renaming arbitrary files.
+For Mode B, if execution is available, use `runtime/native_runtime.py` from the Manifest extension.
 
-## 9. Build order
-Do not build the XLSX before native Brush Roles are resolved.
+Required responsibilities:
+- detect Git LFS pointers before native inspection;
+- inspect real `.brush/.brushset`;
+- validate referenced package resources where readable;
+- build/copy/derive supported native brushes;
+- build one complete final `.brushset`;
+- validate individual family membership;
+- validate final ZIP against the expected native brush set and XLSX reference set.
 
-Required order:
+Git LFS pointer text is never native brushset content.
+
+Do not fake `.brush`, `.brushset`, or `.abr` by changing extensions.
+
+## 9. Mode B build order
+
 1. Final/Provisional Role Set
-2. Native `.brush` outputs
-3. Complete `.brushset`
-4. Load canonical XLSX template
-5. Generate project XLSX using actual delivered native brush names
-6. Reopen native family + ZIP and run delivery QA
+2. `ROLE_TO_NATIVE_MATRIX`
+3. Build/copy every distinct final `.brush`
+4. Build one complete final `.brushset`
+5. Validate native family
+6. Load `entrypoints.procreate_workflow_template`
+7. Generate project XLSX using actual delivered native brush names
+8. Build final ZIP
+9. Reopen ZIP and run four-way set validation:
+   `Expected Native Brush Set = Delivered .brush Set = Brushset Member Set = XLSX Referenced Brush Set`
+
+Do not generate the XLSX first and backfill native files later.
 
 ## 10. Mode boundaries
-Mode B: repository contains Procreate assets, V2 template, and native runtime.
 
-Mode A / AB: this repository currently does not contain an equivalent Photoshop `.abr` native runtime/template/asset branch.  
-If a native Photoshop delivery is requested and no external runtime dependency has been explicitly supplied by the Manifest, return `PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE`. Never fabricate `.abr` delivery.
+Mode B: Procreate analysis + native delivery are supported by this repository.
 
-## 11. Acceptance
-Do not duplicate acceptance rules here. Use `knowledge/RUNTIME-CONTRACT.md` as the single Acceptance/Gate Source.
+Mode A: analysis may continue, but native `.abr` delivery returns `PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE` unless an explicit working external dependency is declared.
 
-If a routed file or capability is unavailable, return the exact Contract status instead of natural-language PASS guessing.
+Mode AB: Procreate native delivery may proceed; full dual-native delivery returns `PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE` while Photoshop native runtime is absent.
+
+Never fabricate `.abr`.
+
+## 11. Acceptance and failure behavior
+
+Use `knowledge/RUNTIME-CONTRACT.md` for:
+- evidence states;
+- FINAL_COUNT gate;
+- native statuses/reason codes;
+- Role coverage;
+- LFS gate;
+- four-way set consistency;
+- PACKAGE_PASS / FULL_PASS.
+
+No prose reasoning may override a machine-readable native runtime failure.
+
+Without a real Procreate/Photoshop import/drawing test, do not claim `FULL_PASS`.
