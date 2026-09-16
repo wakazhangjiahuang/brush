@@ -1,6 +1,6 @@
 ---
 name: brush-creator-studio
-description: Create, validate, optimize, and package evidence-bound Procreate/Photoshop brush systems from current artwork plus the persistent GitHub brush knowledge base, with complete production-stage coverage, material-aware roles, native delivery checks, and project workflow documentation.
+description: Create, validate, optimize, materialize, and package evidence-bound Procreate/Photoshop brush systems from current artwork plus the persistent GitHub brush knowledge base, with complete production-stage coverage, material-aware roles, native binary delivery checks, and project workflow documentation.
 ---
 
 # $brush-creator-studio V2.0.0
@@ -23,9 +23,9 @@ Repository: `wakazhangjiahuang/brush`.
 For every run:
 1. Read `KB-MANIFEST.json` first.
 2. Resolve the V2.0 canonical fields: `entrypoints`, `process_dna`, `source_directories`, `resolver_policy`, and `routing`.
-3. The optional `extensions` object may optimize conditional loading, native runtime, LFS handling, and artifact QA, but V2.0 execution must not depend on understanding those extensions.
+3. The optional `extensions` object may optimize conditional loading, binary materialization, native runtime, LFS handling, and artifact QA, but V2.0 execution must not depend on understanding those extensions.
 4. Do not scan the full repository at startup.
-5. Do not ask the user to re-upload repository-resident assets unless the exact routed asset cannot be resolved.
+5. Do not ask the user to re-upload repository-resident assets unless the exact routed asset cannot be resolved after the declared materialization routes have been attempted.
 
 `knowledge/RUNTIME-CONTRACT.md` is the single Acceptance/Gate Source.
 
@@ -40,6 +40,8 @@ For every run:
 → `Brush Role Inventory`
 → `Required Role Coverage Matrix`
 → `Existing Brush Matching`
+→ `Candidate Shortlist`
+→ **`Binary Materialization Gate`**
 → `Native Metadata / Capability Validation`
 → `KEEP / ADJUST / DERIVE / NEW`
 → `Brush Specialization Gate`
@@ -56,6 +58,7 @@ For every run:
 → `ZIP`
 
 Do not finalize quantity before Redundancy + Undercoverage + Complexity Sanity.
+Do not enter native validation/build with connector-only text/base64 representations when real local binary paths are still unavailable.
 
 ## 4. Production stages, materials, and roles
 
@@ -86,7 +89,7 @@ Use `PROCESS-REGISTRY.json` media only when:
 
 Process DNA is a baseline, not a replacement for the current artwork.
 
-## 6. Candidate retrieval and native evidence
+## 6. Candidate retrieval
 
 After required Brush Roles exist:
 1. Resolve `entrypoints.brush_registry`.
@@ -94,13 +97,51 @@ After required Brush Roles exist:
 3. Prefer capability records whose source hashes still match.
 4. Shortlist the best candidates per Role; when Manifest extensions are understood, honor the configured maximum (currently 3).
 5. Prefer suitable individual `.brush` candidates before downloading large LFS `.brushset` assets.
-6. Inspect only shortlisted native candidates.
+6. Do not validate binary candidates until the Binary Materialization Gate has produced real local binary paths.
 
 Filename, folder name, `purpose_hint`, and discovery hints are not VERIFIED capability evidence.
 
 An unvalidated relevant candidate remains `PENDING_VALIDATION`; lack of native access does not justify `NEW`.
 
-## 7. Classification, specialization, Merge, and undercoverage
+## 7. Binary Materialization Gate — Mode B
+
+This gate exists specifically to prevent the failure mode where analysis, Role planning, and XLSX creation succeed but the run cannot actually deliver `.brush` / `.brushset`.
+
+Before native validation/build, the run must obtain real local binary paths for all material decision assets that are actually needed:
+- shortlisted individual `.brush` candidates;
+- a routed preferred `.brushset` when shortlisted members are required;
+- the canonical Procreate V2 XLSX template.
+
+Materialization order:
+1. reuse an already-real local binary path when one exists;
+2. otherwise use the Manifest `extensions.binary_materialization_bridge` GitHub Actions artifact for the routed branch;
+3. otherwise, if running inside a real Git checkout with Git LFS available, resolve only the required local LFS asset;
+4. only after these routes fail may the run return `NATIVE_OUTPUT_BLOCKED` with `reason_code = BINARY_MATERIALIZATION_UNAVAILABLE`.
+
+The GitHub Actions bridge produces branch-scoped artifacts:
+- `procreate-runtime-cartoon`
+- `procreate-runtime-vintage`
+
+For `mixed`, materialize both branch artifacts when both are needed.
+
+A valid bridge artifact is expected to contain:
+- branch individual `.brush` files;
+- the real preferred `.brushset` bytes, not a Git LFS pointer;
+- preferred-set members pre-extracted as standalone `.brush` files;
+- the canonical Procreate V2 XLSX template;
+- `native-asset-manifest.json` with SHA256 data;
+- the runtime scripts required for inspection/build.
+
+Use `runtime/binary_materialization.py` for:
+- `extract_brush_from_brushset()`;
+- `extract_all_brushes_from_brushset()`;
+- branch bundle preparation / native asset manifest generation.
+
+A GitHub Connector textual response or base64 preview is evidence for discovery/inspection only until the actual binary has been materialized to a usable local file path.
+
+## 8. Native evidence, classification, specialization, Merge, and undercoverage
+
+After materialization, inspect only shortlisted candidates.
 
 Decide `KEEP / ADJUST / DERIVE / NEW` only after relevant candidate validation.
 
@@ -116,9 +157,9 @@ Large compression (for example 14 roles → 3 native brushes) requires explicit 
 
 Complexity bands are QA triggers, never fixed brush-count targets.
 
-## 8. Procreate native runtime
+## 9. Procreate native runtime
 
-For Mode B, if execution is available, use `runtime/native_runtime.py` from the Manifest extension.
+For Mode B, when local binary paths are available, use `runtime/native_runtime.py` as the canonical native structure/build/package validator.
 
 Required responsibilities:
 - detect Git LFS pointers before native inspection;
@@ -129,28 +170,32 @@ Required responsibilities:
 - validate individual family membership;
 - validate final ZIP against the expected native brush set and XLSX reference set.
 
+`runtime/binary_materialization.py` is the transport/extraction helper; it does not replace the Runtime Contract or package acceptance validator.
+
 Git LFS pointer text is never native brushset content.
 
 Do not fake `.brush`, `.brushset`, or `.abr` by changing extensions.
 
-## 9. Mode B build order
+## 10. Mode B build order
 
 1. Final/Provisional Role Set
 2. `ROLE_TO_NATIVE_MATRIX`
-3. Build/copy every distinct final `.brush`
-4. Build one complete final `.brushset`
-5. Validate native family
-6. Load `entrypoints.procreate_workflow_template`
-7. Generate project XLSX using actual delivered native brush names
-8. Build final ZIP
-9. Reopen ZIP and run four-way set validation:
+3. Binary Materialization Gate confirms all required source/template binaries are local and real
+4. Build/copy every distinct final `.brush`
+5. Build one complete final `.brushset`
+6. Validate native family
+7. Load `entrypoints.procreate_workflow_template`
+8. Generate project XLSX using actual delivered native brush names
+9. Build final ZIP
+10. Reopen ZIP and run four-way set validation:
    `Expected Native Brush Set = Delivered .brush Set = Brushset Member Set = XLSX Referenced Brush Set`
 
 Do not generate the XLSX first and backfill native files later.
+Do not stop at `BINARY_MATERIALIZATION_UNAVAILABLE` until the declared bridge route has been attempted when available.
 
-## 10. Mode boundaries
+## 11. Mode boundaries
 
-Mode B: Procreate analysis + native delivery are supported by this repository.
+Mode B: Procreate analysis + native delivery are supported by this repository when binary materialization succeeds.
 
 Mode A: analysis may continue, but native `.abr` delivery returns `PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE` unless an explicit working external dependency is declared.
 
@@ -158,11 +203,12 @@ Mode AB: Procreate native delivery may proceed; full dual-native delivery return
 
 Never fabricate `.abr`.
 
-## 11. Acceptance and failure behavior
+## 12. Acceptance and failure behavior
 
 Use `knowledge/RUNTIME-CONTRACT.md` for:
 - evidence states;
 - FINAL_COUNT gate;
+- binary materialization gate;
 - native statuses/reason codes;
 - Role coverage;
 - LFS gate;
