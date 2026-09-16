@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.1",
+  "schema_version": "2.0",
   "verified_date": "2026-09-16",
   "role": "Asset inventory and candidate discovery only. Native behavior evidence belongs in BRUSH-CAPABILITY-REGISTRY.json.",
   "purpose_hint_policy": "discovery_only",
