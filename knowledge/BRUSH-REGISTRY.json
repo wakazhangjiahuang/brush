@@ -1,64 +1,69 @@
 {
-  "schema_version": "1.0",
-  "verified_date": "2026-09-15",
-  "parameter_verification_default": false,
-  "policy": "Names and locations are verified from the repository. purpose_hint is only a routing hint when derived from the filename. Never treat it as validated Procreate behavior without software testing.",
+  "schema_version": "2.1",
+  "verified_date": "2026-09-16",
+  "role": "Asset inventory and candidate discovery only. Native behavior evidence belongs in BRUSH-CAPABILITY-REGISTRY.json.",
+  "purpose_hint_policy": "discovery_only",
   "families": [
     {
       "family_id": "cartoon-single",
       "label": "卡通笔刷-单",
       "path": "笔刷/卡通笔刷-单",
+      "branch_tags": ["cartoon"],
+      "storage": "git",
       "assets": [
-        {"path": "笔刷/卡通笔刷-单/VLM-铅笔-水彩线稿 1 1_original.brush", "format": ".brush", "purpose_hint": ["lineart", "watercolor-pencil"], "purpose_hint_source": "filename", "git_blob_sha": "9af518e2441e0139ef3f1a4a4272bee9cef1a216"},
-        {"path": "笔刷/卡通笔刷-单/勾线笔-滑  1.brush", "format": ".brush", "purpose_hint": ["lineart", "smooth"], "purpose_hint_source": "filename", "git_blob_sha": "ec4d2e9103e76ca347a826fda2a62699bcf7b77e"},
-        {"path": "笔刷/卡通笔刷-单/听盒 1.brush", "format": ".brush", "purpose_hint": ["unknown"], "purpose_hint_source": "filename_insufficient", "git_blob_sha": "6a658e0dc8e421ea5106ca0e0cb102a6bc2d348b"},
-        {"path": "笔刷/卡通笔刷-单/吹石-轻压感勾线.brush", "format": ".brush", "purpose_hint": ["lineart", "light-pressure"], "purpose_hint_source": "filename", "git_blob_sha": "46d687e2a096f38195de86a347e9cf60b0105e9e"},
-        {"path": "笔刷/卡通笔刷-单/干油墨 1.brush", "format": ".brush", "purpose_hint": ["dry-ink", "texture"], "purpose_hint_source": "filename", "git_blob_sha": "030970516a6938226887bd0fdf7143f885f272f9"},
-        {"path": "笔刷/卡通笔刷-单/技术笔.brush", "format": ".brush", "purpose_hint": ["technical-line"], "purpose_hint_source": "filename", "git_blob_sha": "5b314ed984e47c111aab34dad7b149b34a5a370d"},
-        {"path": "笔刷/卡通笔刷-单/极滑-填色 1.brush", "format": ".brush", "purpose_hint": ["fill", "smooth"], "purpose_hint_source": "filename", "git_blob_sha": "610f69d66ec6899435bacc8c2be734df135015f3"},
-        {"path": "笔刷/卡通笔刷-单/网点纸 05 1 2.brush", "format": ".brush", "purpose_hint": ["halftone", "paper-texture"], "purpose_hint_source": "filename", "git_blob_sha": "b3d3933e6c2bf574f5ac966c932669604b57e50c"}
+        {"brush_id":"cartoon-single-001","family":"cartoon-single","path":"笔刷/卡通笔刷-单/VLM-铅笔-水彩线稿 1 1_original.brush","format":".brush","sha":"9af518e2441e0139ef3f1a4a4272bee9cef1a216","branch_tags":["cartoon"],"discovery_hints":["lineart","watercolor-pencil"],"storage":"git"},
+        {"brush_id":"cartoon-single-002","family":"cartoon-single","path":"笔刷/卡通笔刷-单/勾线笔-滑  1.brush","format":".brush","sha":"ec4d2e9103e76ca347a826fda2a62699bcf7b77e","branch_tags":["cartoon"],"discovery_hints":["lineart","smooth"],"storage":"git"},
+        {"brush_id":"cartoon-single-003","family":"cartoon-single","path":"笔刷/卡通笔刷-单/听盒 1.brush","format":".brush","sha":"6a658e0dc8e421ea5106ca0e0cb102a6bc2d348b","branch_tags":["cartoon"],"discovery_hints":["unknown"],"storage":"git"},
+        {"brush_id":"cartoon-single-004","family":"cartoon-single","path":"笔刷/卡通笔刷-单/吹石-轻压感勾线.brush","format":".brush","sha":"46d687e2a096f38195de86a347e9cf60b0105e9e","branch_tags":["cartoon"],"discovery_hints":["lineart","light-pressure"],"storage":"git"},
+        {"brush_id":"cartoon-single-005","family":"cartoon-single","path":"笔刷/卡通笔刷-单/干油墨 1.brush","format":".brush","sha":"030970516a6938226887bd0fdf7143f885f272f9","branch_tags":["cartoon"],"discovery_hints":["dry-ink","texture"],"storage":"git"},
+        {"brush_id":"cartoon-single-006","family":"cartoon-single","path":"笔刷/卡通笔刷-单/技术笔.brush","format":".brush","sha":"5b314ed984e47c111aab34dad7b149b34a5a370d","branch_tags":["cartoon"],"discovery_hints":["technical-line"],"storage":"git"},
+        {"brush_id":"cartoon-single-007","family":"cartoon-single","path":"笔刷/卡通笔刷-单/极滑-填色 1.brush","format":".brush","sha":"610f69d66ec6899435bacc8c2be734df135015f3","branch_tags":["cartoon"],"discovery_hints":["fill","smooth"],"storage":"git"},
+        {"brush_id":"cartoon-single-008","family":"cartoon-single","path":"笔刷/卡通笔刷-单/网点纸 05 1 2.brush","format":".brush","sha":"b3d3933e6c2bf574f5ac966c932669604b57e50c","branch_tags":["cartoon"],"discovery_hints":["halftone","paper-texture"],"storage":"git"}
       ]
     },
     {
       "family_id": "vintage-single",
       "label": "复古笔刷-单",
       "path": "笔刷/复古笔刷-单",
+      "branch_tags": ["vintage"],
+      "storage": "git",
       "assets": [
-        {"path": "笔刷/复古笔刷-单/02清润柔边（铺色）.brush", "format": ".brush", "purpose_hint": ["base-color", "soft-edge"], "purpose_hint_source": "filename", "git_blob_sha": "a4f576ef2cee01e03a6e6e4bc83433ec36ff359f"},
-        {"path": "笔刷/复古笔刷-单/17 水彩风景@画梨 2.brush", "format": ".brush", "purpose_hint": ["watercolor", "landscape"], "purpose_hint_source": "filename", "git_blob_sha": "17fc7e9bff91505f5765617e675d62148c3bd986"},
-        {"path": "笔刷/复古笔刷-单/Jens' Pencil Brush.brush", "format": ".brush", "purpose_hint": ["pencil"], "purpose_hint_source": "filename", "git_blob_sha": "13117f5fcfd0335502da707a17efa9dd73316f37"},
-        {"path": "笔刷/复古笔刷-单/VLM-压力湿边-细节  1.brush", "format": ".brush", "purpose_hint": ["detail", "wet-edge", "pressure"], "purpose_hint_source": "filename", "git_blob_sha": "7f3719a99dbe3f696e263ec7e5647413bf9acc42"},
-        {"path": "笔刷/复古笔刷-单/VLM-压力湿边-细节  1_original.brush", "format": ".brush", "purpose_hint": ["detail", "wet-edge", "pressure"], "purpose_hint_source": "filename", "git_blob_sha": "ab863f22672b9d5560dd528cc7af89ef123d5f62"},
-        {"path": "笔刷/复古笔刷-单/VLM-压力湿边-细节  1_original_original.brush", "format": ".brush", "purpose_hint": ["detail", "wet-edge", "pressure"], "purpose_hint_source": "filename", "git_blob_sha": "f3497ce2442eb30c4dada20e8734d24ce75d6057"},
-        {"path": "笔刷/复古笔刷-单/VLM-浓湿边-平涂1.brush", "format": ".brush", "purpose_hint": ["flat-color", "wet-edge"], "purpose_hint_source": "filename", "git_blob_sha": "8b94cfe7fba620c781bcdd2d46c96c6ad88b5b47"},
-        {"path": "笔刷/复古笔刷-单/VLM-湿海绵-晕染  1_original.brush", "format": ".brush", "purpose_hint": ["wet-sponge", "blending"], "purpose_hint_source": "filename", "git_blob_sha": "0cda32d1c7f3f220243a8164790bb74e5aebbf58"},
-        {"path": "笔刷/复古笔刷-单/VLM-铅笔-水彩线稿 1 1.brush", "format": ".brush", "purpose_hint": ["lineart", "watercolor-pencil"], "purpose_hint_source": "filename", "git_blob_sha": "fa4cb2daa9a27e3af1813969faf09db52579bb46"},
-        {"path": "笔刷/复古笔刷-单/VLM-铅笔-水彩线稿 1 1_original.brush", "format": ".brush", "purpose_hint": ["lineart", "watercolor-pencil"], "purpose_hint_source": "filename", "git_blob_sha": "9af518e2441e0139ef3f1a4a4272bee9cef1a216"},
-        {"path": "笔刷/复古笔刷-单/上色用的★★★ 1 1.brush", "format": ".brush", "purpose_hint": ["coloring"], "purpose_hint_source": "filename", "git_blob_sha": "39b809245bc7038c9b958e82bad2a1677ec86c71"},
-        {"path": "笔刷/复古笔刷-单/勾线4 普通微毛边 线稿绝佳 1(1).brush", "format": ".brush", "purpose_hint": ["lineart", "slight-rough-edge"], "purpose_hint_source": "filename", "git_blob_sha": "77a268ae52e03c2e7be99f8a6318e6ba84a42a1b"},
-        {"path": "笔刷/复古笔刷-单/吹石-奶香乌龙.brush", "format": ".brush", "purpose_hint": ["unknown"], "purpose_hint_source": "filename_insufficient", "git_blob_sha": "5968b3295e8b86b47c52c97a344010adbf62abdd"},
-        {"path": "笔刷/复古笔刷-单/吹石-轻压感勾线.brush", "format": ".brush", "purpose_hint": ["lineart", "light-pressure"], "purpose_hint_source": "filename", "git_blob_sha": "46d687e2a096f38195de86a347e9cf60b0105e9e"},
-        {"path": "笔刷/复古笔刷-单/细节刻画 2.brush", "format": ".brush", "purpose_hint": ["detail"], "purpose_hint_source": "filename", "git_blob_sha": "0495cd12d1e14cd2e7904aa1211c9d58f22d1a15"}
+        {"brush_id":"vintage-single-001","family":"vintage-single","path":"笔刷/复古笔刷-单/02清润柔边（铺色）.brush","format":".brush","sha":"a4f576ef2cee01e03a6e6e4bc83433ec36ff359f","branch_tags":["vintage"],"discovery_hints":["base-color","soft-edge"],"storage":"git"},
+        {"brush_id":"vintage-single-002","family":"vintage-single","path":"笔刷/复古笔刷-单/17 水彩风景@画梨 2.brush","format":".brush","sha":"17fc7e9bff91505f5765617e675d62148c3bd986","branch_tags":["vintage"],"discovery_hints":["watercolor","landscape"],"storage":"git"},
+        {"brush_id":"vintage-single-003","family":"vintage-single","path":"笔刷/复古笔刷-单/Jens' Pencil Brush.brush","format":".brush","sha":"13117f5fcfd0335502da707a17efa9dd73316f37","branch_tags":["vintage"],"discovery_hints":["pencil"],"storage":"git"},
+        {"brush_id":"vintage-single-004","family":"vintage-single","path":"笔刷/复古笔刷-单/VLM-压力湿边-细节  1.brush","format":".brush","sha":"7f3719a99dbe3f696e263ec7e5647413bf9acc42","branch_tags":["vintage"],"discovery_hints":["detail","wet-edge","pressure"],"storage":"git"},
+        {"brush_id":"vintage-single-005","family":"vintage-single","path":"笔刷/复古笔刷-单/VLM-压力湿边-细节  1_original.brush","format":".brush","sha":"ab863f22672b9d5560dd528cc7af89ef123d5f62","branch_tags":["vintage"],"discovery_hints":["detail","wet-edge","pressure"],"storage":"git"},
+        {"brush_id":"vintage-single-006","family":"vintage-single","path":"笔刷/复古笔刷-单/VLM-压力湿边-细节  1_original_original.brush","format":".brush","sha":"f3497ce2442eb30c4dada20e8734d24ce75d6057","branch_tags":["vintage"],"discovery_hints":["detail","wet-edge","pressure"],"storage":"git"},
+        {"brush_id":"vintage-single-007","family":"vintage-single","path":"笔刷/复古笔刷-单/VLM-浓湿边-平涂1.brush","format":".brush","sha":"8b94cfe7fba620c781bcdd2d46c96c6ad88b5b47","branch_tags":["vintage"],"discovery_hints":["flat-color","wet-edge"],"storage":"git"},
+        {"brush_id":"vintage-single-008","family":"vintage-single","path":"笔刷/复古笔刷-单/VLM-湿海绵-晕染  1_original.brush","format":".brush","sha":"0cda32d1c7f3f220243a8164790bb74e5aebbf58","branch_tags":["vintage"],"discovery_hints":["wet-sponge","blending"],"storage":"git"},
+        {"brush_id":"vintage-single-009","family":"vintage-single","path":"笔刷/复古笔刷-单/VLM-铅笔-水彩线稿 1 1.brush","format":".brush","sha":"fa4cb2daa9a27e3af1813969faf09db52579bb46","branch_tags":["vintage"],"discovery_hints":["lineart","watercolor-pencil"],"storage":"git"},
+        {"brush_id":"vintage-single-010","family":"vintage-single","path":"笔刷/复古笔刷-单/VLM-铅笔-水彩线稿 1 1_original.brush","format":".brush","sha":"9af518e2441e0139ef3f1a4a4272bee9cef1a216","branch_tags":["vintage"],"discovery_hints":["lineart","watercolor-pencil"],"storage":"git"},
+        {"brush_id":"vintage-single-011","family":"vintage-single","path":"笔刷/复古笔刷-单/上色用的★★★ 1 1.brush","format":".brush","sha":"39b809245bc7038c9b958e82bad2a1677ec86c71","branch_tags":["vintage"],"discovery_hints":["coloring"],"storage":"git"},
+        {"brush_id":"vintage-single-012","family":"vintage-single","path":"笔刷/复古笔刷-单/勾线4 普通微毛边 线稿绝佳 1(1).brush","format":".brush","sha":"77a268ae52e03c2e7be99f8a6318e6ba84a42a1b","branch_tags":["vintage"],"discovery_hints":["lineart","slight-rough-edge"],"storage":"git"},
+        {"brush_id":"vintage-single-013","family":"vintage-single","path":"笔刷/复古笔刷-单/吹石-奶香乌龙.brush","format":".brush","sha":"5968b3295e8b86b47c52c97a344010adbf62abdd","branch_tags":["vintage"],"discovery_hints":["unknown"],"storage":"git"},
+        {"brush_id":"vintage-single-014","family":"vintage-single","path":"笔刷/复古笔刷-单/吹石-轻压感勾线.brush","format":".brush","sha":"46d687e2a096f38195de86a347e9cf60b0105e9e","branch_tags":["vintage"],"discovery_hints":["lineart","light-pressure"],"storage":"git"},
+        {"brush_id":"vintage-single-015","family":"vintage-single","path":"笔刷/复古笔刷-单/细节刻画 2.brush","format":".brush","sha":"0495cd12d1e14cd2e7904aa1211c9d58f22d1a15","branch_tags":["vintage"],"discovery_hints":["detail"],"storage":"git"}
       ]
     },
     {
       "family_id": "brushsets",
       "label": "套装笔刷",
       "path": "笔刷/套装笔刷",
+      "branch_tags": ["cartoon","vintage","shared"],
       "storage": "git-lfs",
       "assets": [
-        {"path": "笔刷/套装笔刷/Taryn 24支.brushset", "format": ".brushset", "declared_count_from_filename": 24, "lfs_sha256": "3c058346013cb2b0fc49ca443f6776679e033c8b70501d3caf0dfed127acdf79", "lfs_size_bytes": 12314821},
-        {"path": "笔刷/套装笔刷/吹石 10支——自用版.brushset", "format": ".brushset", "declared_count_from_filename": 10, "lfs_sha256": "f2c65a8a57fb4e2df30e0915a95e9f5a9e8de13e1d5d3e5f866ff8cfb8b6565d", "lfs_size_bytes": 11953902},
-        {"path": "笔刷/套装笔刷/水彩18支——卡通插画.brushset", "format": ".brushset", "declared_count_from_filename": 18, "lfs_sha256": "a61cce6b2eb5d2d50521b6fd86b44b847c8c617a92b98bf6611ef8429f7895e7", "lfs_size_bytes": 31904482},
-        {"path": "笔刷/套装笔刷/海怪46支套装组.brushset", "format": ".brushset", "declared_count_from_filename": 46, "lfs_sha256": "4925d71b97af1ea925fa7aeade4e092974aca4422f80d0d68328c391fc462c45", "lfs_size_bytes": 30861972},
-        {"path": "笔刷/套装笔刷/田心水彩笔刷59支——复古类 1.brushset", "format": ".brushset", "declared_count_from_filename": 59, "lfs_sha256": "9d20524700c15c183a28995bc32f66ad706d148253e515a8b95a6536a4ba1ad8", "lfs_size_bytes": 85709812},
-        {"path": "笔刷/套装笔刷/粉水彩——51支 .brushset", "format": ".brushset", "declared_count_from_filename": 51, "lfs_sha256": "886f0ff7e73445c052486c0d7ea4ebb5b3915dad209057152f889efa8cf712df", "lfs_size_bytes": 193276371}
+        {"brush_id":"brushset-001","family":"brushsets","path":"笔刷/套装笔刷/Taryn 24支.brushset","format":".brushset","sha":"3c058346013cb2b0fc49ca443f6776679e033c8b70501d3caf0dfed127acdf79","branch_tags":["shared"],"discovery_hints":["set"],"storage":"git-lfs","declared_count_from_filename":24,"lfs_sha256":"3c058346013cb2b0fc49ca443f6776679e033c8b70501d3caf0dfed127acdf79","lfs_size_bytes":12314821},
+        {"brush_id":"brushset-002","family":"brushsets","path":"笔刷/套装笔刷/吹石 10支——自用版.brushset","format":".brushset","sha":"f2c65a8a57fb4e2df30e0915a95e9f5a9e8de13e1d5d3e5f866ff8cfb8b6565d","branch_tags":["shared"],"discovery_hints":["set"],"storage":"git-lfs","declared_count_from_filename":10,"lfs_sha256":"f2c65a8a57fb4e2df30e0915a95e9f5a9e8de13e1d5d3e5f866ff8cfb8b6565d","lfs_size_bytes":11953902},
+        {"brush_id":"brushset-003","family":"brushsets","path":"笔刷/套装笔刷/水彩18支——卡通插画.brushset","format":".brushset","sha":"a61cce6b2eb5d2d50521b6fd86b44b847c8c617a92b98bf6611ef8429f7895e7","branch_tags":["cartoon"],"discovery_hints":["set"],"storage":"git-lfs","declared_count_from_filename":18,"lfs_sha256":"a61cce6b2eb5d2d50521b6fd86b44b847c8c617a92b98bf6611ef8429f7895e7","lfs_size_bytes":31904482},
+        {"brush_id":"brushset-004","family":"brushsets","path":"笔刷/套装笔刷/海怪46支套装组.brushset","format":".brushset","sha":"4925d71b97af1ea925fa7aeade4e092974aca4422f80d0d68328c391fc462c45","branch_tags":["shared"],"discovery_hints":["set"],"storage":"git-lfs","declared_count_from_filename":46,"lfs_sha256":"4925d71b97af1ea925fa7aeade4e092974aca4422f80d0d68328c391fc462c45","lfs_size_bytes":30861972},
+        {"brush_id":"brushset-005","family":"brushsets","path":"笔刷/套装笔刷/田心水彩笔刷59支——复古类 1.brushset","format":".brushset","sha":"9d20524700c15c183a28995bc32f66ad706d148253e515a8b95a6536a4ba1ad8","branch_tags":["vintage"],"discovery_hints":["set"],"storage":"git-lfs","declared_count_from_filename":59,"lfs_sha256":"9d20524700c15c183a28995bc32f66ad706d148253e515a8b95a6536a4ba1ad8","lfs_size_bytes":85709812},
+        {"brush_id":"brushset-006","family":"brushsets","path":"笔刷/套装笔刷/粉水彩——51支 .brushset","format":".brushset","sha":"886f0ff7e73445c052486c0d7ea4ebb5b3915dad209057152f889efa8cf712df","branch_tags":["shared","vintage"],"discovery_hints":["set"],"storage":"git-lfs","declared_count_from_filename":51,"lfs_sha256":"886f0ff7e73445c052486c0d7ea4ebb5b3915dad209057152f889efa8cf712df","lfs_size_bytes":193276371}
       ]
     }
   ],
-  "routing_hints": {
-    "cartoon": ["cartoon-single", "水彩18支——卡通插画.brushset"],
-    "vintage": ["vintage-single", "田心水彩笔刷59支——复古类 1.brushset"],
-    "shared_candidate_sets": ["Taryn 24支.brushset", "吹石 10支——自用版.brushset", "海怪46支套装组.brushset", "粉水彩——51支 .brushset"]
+  "candidate_policy": {
+    "max_shortlist_per_role": 3,
+    "preferred_order": ["verified_capability_registry","same_branch_individual_brush","readable_native_metadata","shortlisted_brushset_member","derive_or_new"],
+    "do_not_load_all_brushsets_for_safety": true
   }
 }

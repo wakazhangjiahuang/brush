@@ -1,14 +1,151 @@
 {
-  "schema_version": "2.0",
-  "registry_state": "BOOTSTRAP",
-  "purpose": "Persist only actually extracted or software-validated brush capability evidence. Do not populate from filenames alone.",
-  "allowed_validation_states": ["VERIFIED", "VERIFIED_METADATA", "INFERRED", "PROPOSED", "UNVERIFIED"],
-  "required_fields_for_verified_metadata": ["brush_id", "native_name", "source_path", "native_format", "metadata", "validation_state", "evidence_date"],
-  "entries": [],
+  "schema_version": "2.1",
+  "registry_state": "ACTIVE_PARTIAL",
+  "purpose": "Persist only capability evidence extracted from native packages or real target-software tests. Filename/purpose_hint never creates VERIFIED behavior.",
+  "allowed_validation_states": [
+    "VERIFIED_METADATA",
+    "VERIFIED"
+  ],
+  "invalidation_policy": "If source_sha256 or source_container_sha256 changes, the matching capability evidence is stale until revalidated.",
+  "required_fields": [
+    "brush_id",
+    "native_name",
+    "source_path",
+    "source_sha256",
+    "native_format",
+    "metadata",
+    "validation_state",
+    "evidence_date"
+  ],
+  "entries": [
+    {
+      "brush_id": "vintage-set-tianxin59-f5278a97",
+      "native_name": "水意清透",
+      "source_path": "笔刷/套装笔刷/田心水彩笔刷59支——复古类 1.brushset#F5278A97-3C02-4264-A625-CB1957730208",
+      "source_sha256": "6dae2b0c440d22856be9b778a0664dae5272788fe0be1f8b116fff0d0c5031c7",
+      "source_container_sha256": "9d20524700c15c183a28995bc32f66ad706d148253e515a8b95a6536a4ba1ad8",
+      "native_format": ".brush",
+      "procreate_version_if_known": null,
+      "metadata": {
+        "archive_version": 4,
+        "shape": {
+          "count": 0.0,
+          "scatter": 0.0,
+          "randomise": false
+        },
+        "grain": {
+          "depth": 0.12234173715114594,
+          "texture_scale": 0.5863449573516846,
+          "texture_contrast": 0.0,
+          "texture_movement": 1.0
+        },
+        "edge": {
+          "wet_edges_amount": 1.0
+        },
+        "opacity": {
+          "max": 1.0,
+          "min": 0.0,
+          "pressure_opacity": 0.19668100774288177
+        },
+        "pressure": {
+          "size": 1.0,
+          "response": 0.0,
+          "mix": 0.25
+        },
+        "tilt": {
+          "size": 0.5983403921127319
+        },
+        "wet_dry": {
+          "wet_accumulation": 0.800000011920929,
+          "wetness_jitter": 0.5,
+          "load": 0.6800000071525574,
+          "recursive_mixing": true
+        },
+        "size_range": {
+          "min": 0.0,
+          "max": 2.4450507164001465
+        },
+        "scatter_jitter": {
+          "plot_jitter": 0.06897961348295212,
+          "longitudinal_jitter": 0.06897961348295212
+        },
+        "other_readable": {
+          "plot_spacing": 0.015563021413981915,
+          "plot_smoothing": 0.30000001192092896,
+          "smudge_accumulation": 1.0
+        }
+      },
+      "validation_state": "VERIFIED_METADATA",
+      "evidence_date": "2026-09-16",
+      "evidence_scope": "Native Brush.archive + ZIP package structure parsed; no real Procreate drawing test."
+    },
+    {
+      "brush_id": "vintage-set-tianxin59-82446b0f",
+      "native_name": "水彩勾线 淡",
+      "source_path": "笔刷/套装笔刷/田心水彩笔刷59支——复古类 1.brushset#82446B0F-26C2-481E-B9C2-4196111EE1E8",
+      "source_sha256": "a3d3fafa9ec375c05e9257b5fe518670bccb8971c64672be4f90eea7b433406f",
+      "source_container_sha256": "9d20524700c15c183a28995bc32f66ad706d148253e515a8b95a6536a4ba1ad8",
+      "native_format": ".brush",
+      "procreate_version_if_known": null,
+      "metadata": {
+        "archive_version": 4,
+        "shape": {
+          "count": 0.0625,
+          "scatter": 0.0,
+          "randomise": false
+        },
+        "grain": {
+          "depth": 0.3499999940395355,
+          "texture_scale": 1.414080023765564,
+          "texture_contrast": 0.10000000149011612,
+          "texture_movement": 1.0
+        },
+        "edge": {
+          "wet_edges_amount": 0.0
+        },
+        "opacity": {
+          "max": 1.0,
+          "min": 0.0,
+          "pressure_opacity": 0.29297271370887756
+        },
+        "pressure": {
+          "size": 1.0,
+          "response": 0.30000001192092896,
+          "mix": 0.20000000298023224
+        },
+        "tilt": {
+          "size": 0.0
+        },
+        "wet_dry": {
+          "wet_accumulation": 0.10000000149011612,
+          "wetness_jitter": 0.0,
+          "load": 0.009999999776482582,
+          "recursive_mixing": false
+        },
+        "size_range": {
+          "min": 2.7304549803375266e-06,
+          "max": 0.2803869843482971
+        },
+        "scatter_jitter": {
+          "plot_jitter": 0.0250246599316597,
+          "longitudinal_jitter": 0.0250246599316597
+        },
+        "other_readable": {
+          "plot_spacing": 0.0,
+          "plot_smoothing": 0.39962857961654663,
+          "smudge_accumulation": 0.75,
+          "imported_from_abr": true
+        }
+      },
+      "validation_state": "VERIFIED_METADATA",
+      "evidence_date": "2026-09-16",
+      "evidence_scope": "Native Brush.archive + ZIP package structure parsed; no real Procreate drawing test."
+    }
+  ],
   "population_policy": [
-    "Append only evidence extracted from native brush packages or real target-software tests.",
-    "Do not translate purpose_hint or filename text into verified behavior.",
-    "Keep source hashes when available so future runs can reuse validated capability evidence.",
-    "If a brush binary changes, invalidate prior capability evidence until rechecked."
+    "Append only after native_runtime or real target-software validation returns evidence tied to a source hash.",
+    "VERIFIED_METADATA means native structure/metadata evidence, not drawing feel.",
+    "VERIFIED requires a real Procreate import/drawing validation.",
+    "Do not convert filenames or discovery hints into capability evidence."
   ]
 }

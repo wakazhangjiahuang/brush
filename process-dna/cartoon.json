@@ -1,8 +1,25 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1",
   "branch": "cartoon",
   "state": "PROPOSED_BASELINE",
-  "evidence_source": "Remote repository process media must be inspected before treating stage details as verified.",
-  "default_stage_emphasis": ["P01","P03","P04","P05","P07","P10","P11","P14","P15","P17","P18","P19","P20"],
-  "rules": ["Current artwork overrides baseline.","Do not assume every stage is required.","Material-specific stages are added dynamically."]
+  "priority": "CURRENT_ARTWORK_OVERRIDES",
+  "process_registry_id": "process-cartoon-01",
+  "workflow_baseline": {
+    "line_strategy": "cleaner controlled linework may be prominent when supported by current artwork",
+    "color_strategy": "shape readability and controlled base-color separation before refinement",
+    "texture_strategy": "texture is conditional and should not be forced when the artwork is clean/flat",
+    "detail_strategy": "specialized decorative/detail roles are retained when they materially improve repeatability or speed"
+  },
+  "candidate_strategy": {
+    "preferred_family_ids": [
+      "cartoon-single",
+      "brushsets"
+    ],
+    "prefer_individual_brush_before_large_lfs_set": true
+  },
+  "rules": [
+    "Current artwork is authoritative.",
+    "Do not copy the global Process Stage or Material Taxonomy into this file.",
+    "Load PROCESS-REGISTRY media only when current artwork/process evidence is insufficient or conflicting."
+  ]
 }

@@ -1,371 +1,110 @@
 ---
 name: brush-creator-studio
-description: Create, validate, optimize, and package production-ready Procreate or Photoshop brush systems from current artwork plus the persistent GitHub brush knowledge base, with complete production-stage coverage, material-aware brush roles, anti-undercoverage gates, native brush delivery, and project-specific workflow documentation.
+description: Build and validate evidence-bound Procreate brush systems from current artwork using a Manifest-driven remote knowledge base, conditional candidate retrieval, native structure validation, and package count-consistency checks.
 ---
 
-# $brush-creator-studio V2.0.0
+# $brush-creator-studio — Repository Runtime Contract Adapter
 
 ## 1. Purpose
+This repository-side `SKILL.md` defines only execution order, decision boundaries, and failure behavior.  
+Concrete paths and load policy come from `KB-MANIFEST.json`. Acceptance criteria and status codes come only from `knowledge/RUNTIME-CONTRACT.md`.
 
-`$brush-creator-studio` turns a current illustration source into a complete, evidence-bound brush production system. It does **not** optimize for the fewest brushes. It optimizes for the **Minimal Complete Production Set**: the smallest set that fully covers the real drawing process, materials, object-specific needs, quality, and production efficiency without redundant brushes.
+Optimization target: **Minimal Complete Production Set** — complete production coverage without redundant brushes. Never optimize for “the fewest possible brushes”.
 
-Supported modes:
-- **A = Photoshop** → `.abr`
-- **B = Procreate** → `.brush` + `.brushset`
-- **AB = Dual mode** → one shared Artist Profile + Brush DNA, then software-specific native branches
+## 2. Manifest-first boot
+For every run:
+1. Read only `KB-MANIFEST.json`.
+2. Verify requested mode against `mode_capability`.
+3. Follow `runtime_load_policy`; do not scan the full repository.
+4. Current artwork is the highest-priority project evidence.
+5. Do not request repository-resident assets from the user again unless the routed asset is unavailable.
 
-The current artwork is always the highest-priority project evidence.
+`README.md`, `START-PROMPT.md`, `templates/README.md`, Git history, migration notes, and static reports are not runtime knowledge sources.
 
-## 2. Persistent GitHub knowledge resolver
-
-Repository: `https://github.com/wakazhangjiahuang/brush`
-
-Before asking the user to re-upload reusable data, read the repository in this order:
-1. `KB-MANIFEST.json`
-2. `knowledge/ARTIST-PROFILE.json`
-3. `knowledge/PROCESS-REGISTRY.json`
-4. `knowledge/BRUSH-REGISTRY.json`
-5. `knowledge/BRUSH-CAPABILITY-REGISTRY.json`
-6. `knowledge/PROCESS-STAGE-TAXONOMY.json`
-7. `knowledge/MATERIAL-TAXONOMY.json`
-8. `knowledge/COMPLEXITY-RULES.json`
-9. `knowledge/MERGE-GATE.md`
-10. `knowledge/RUNTIME-CONTRACT.md`
-11. manifest-registered Process DNA and delivery template for the selected mode/branch
-
-Do not ask the user to re-upload repository-resident brush libraries, process recordings, profiles, or templates unless the exact required remote asset is unavailable.
-
-## 3. Required execution chain
-
-For every new brush creation run, use this exact chain:
-
-`Current Artwork Audit`
-→ `Repository Resolver`
-→ `Artwork Complexity Profile`
-→ `Style / Color / Material DNA`
-→ `Full Production Stage Decomposition`
-→ `Process DNA`
+## 3. Conditional execution chain
+`BOOT / Manifest`
+→ `Current Artwork Audit`
+→ `Artwork Complexity + Branch Routing`
+→ `Core Rule Load`
+→ `Stage Decomposition`
 → `Object / Material Map`
 → `Brush Role Inventory`
-→ `Required Role Coverage Matrix`
-→ `Existing Brush Candidate Retrieval`
-→ `Native Metadata / Capability Validation`
+→ `Selected Process DNA`
+→ `Candidate Registry Match`
+→ `Shortlist Native Validation`
 → `KEEP / ADJUST / DERIVE / NEW`
-→ `Brush Specialization Gate`
-→ `Merge Eligibility Gate`
-→ `Redundancy Check`
-→ `Undercoverage Review`
-→ `Complexity Sanity Check`
+→ `Specialization`
+→ `Merge`
+→ `Redundancy / Undercoverage`
 → `Dynamic Quantity Decision`
-→ `Native Brush Build`
-→ `Native Delivery Gate`
-→ `Project Workflow XLSX`
-→ `QA`
+→ `ROLE_TO_NATIVE_MATRIX`
+→ `Native Build`
+→ `XLSX`
+→ `Delivery QA`
 → `ZIP`
 
-No quantity decision may be finalized before the two anti-error gates have run:
-- **Redundancy Check** prevents unnecessary duplicates.
-- **Undercoverage Review** prevents over-merging and missing brush roles.
-
-## 4. Full Production Stage Decomposition
-
-Before brush matching, inspect all applicable production stages from `PROCESS-STAGE-TAXONOMY.json`.
-
-Every stage must be explicitly classified:
-- `REQUIRED`
-- `OPTIONAL`
-- `NOT_APPLICABLE`
-
-At minimum audit these categories when relevant:
-- sketch / construction
-- primary lineart
-- secondary/detail line
-- base fill
-- transparent wash
-- local color
-- wet-edge / bleed
-- blend / smudge
-- paper / pigment / grain texture
-- shadow / value
-- dry brush
-- fur / hair
-- fabric / clothing
-- decorative patterns / accessories
-- environment / foliage / architecture
-- fine detail
-- highlight
-- glaze / color refinement
-- final cleanup
-
-Do not collapse these into three generic buckets such as “line / color / blend” without first proving that all stage-specific behaviors remain covered.
-
-## 5. Artwork Complexity Profile
-
-Assess at least:
-- number of main subjects
-- number of secondary subjects
-- number of object classes
-- number of distinct material classes
-- fur/hair types
-- clothing/accessory complexity
-- texture density
-- background/scene complexity
-- lighting/value complexity
-- refinement depth
-- repeated decorative systems
-
-Complexity determines the strictness of the undercoverage review. It does **not** directly set a fixed brush count.
-
-## 6. Object / Material Map
-
-Build a map of actual project materials and behaviors. Examples include:
-- short fur
-- long fur
-- curly/fluffy fur
-- rough terrier fur
-- dense dark fur
-- skin
-- fabric
-- ribbon
-- paper
-- wood
-- foliage
-- metal
-- glass
-- watercolor wash
-- dry pigment
-- rough pencil
-- smooth decorative line
-
-A visible material-specific behavior may not be deleted merely because a general-purpose brush can produce a rough approximation.
-
-## 7. Brush Role Inventory
-
-Separate **Production Stage**, **Required Brush Behavior**, **Brush Role**, **Candidate Brush**, and **Delivered Native Brush**.
-
-A Brush Role is a production function, not a filename. Examples:
-- construction sketch
-- loose watercolor line
-- precise detail line
-- flat/base fill
-- transparent wash
-- wet-edge glaze
-- dry pigment texture
-- fur breaker
-- cloth/fabric texture
-- ribbon/decorative smooth line
-- foliage scatter
-- shadow wash
-- highlight / cleanup
-
-One brush may cover multiple roles only after the Merge Eligibility Gate passes.
-
-## 8. Existing brush matching and evidence states
-
-Use repository inventory and capability data as candidates.
-
-Evidence labels:
-- `VERIFIED` — tested/extracted in target software or equivalent validated native workflow
-- `VERIFIED_METADATA` — native metadata extracted, but not necessarily hand-tested in target software
-- `INFERRED` — supported by artwork/process evidence, not native-tested
-- `PROPOSED` — recommended new setting or behavior
-- `UNVERIFIED` — insufficient evidence
-
-Candidate discovery states:
-- `MATCH_FOUND`
-- `PENDING_VALIDATION`
-
-Final classifications:
-- `KEEP`
-- `ADJUST`
-- `DERIVE`
-- `NEW`
-
-Rules:
-- filename/purpose hints are discovery only, never proof of behavior;
-- an unresolved candidate remains `PENDING_VALIDATION` and may not be converted to `NEW` only because inspection is unavailable;
-- `NEW` is allowed only after relevant existing candidates are sufficiently checked and cannot cover the role without unacceptable compromise.
-
-## 9. Brush Specialization Gate
-
-Distinguish general-purpose from specialized roles.
-
-Specialized visible behaviors such as fur, dry brush, fabric, stipple, grain, wet bleed, foliage, smooth decorative ribbon lines, or high-detail cleanup must not be removed simply because a general brush can “technically” perform them.
-
-Keep a dedicated role when specialization materially improves any of:
-- visual fidelity
-- repeatability
-- speed
-- pressure/opacity control
-- edge behavior
-- texture behavior
-- size-range usability
-- reduced parameter switching
-
-## 10. Merge Eligibility Gate
-
-Never merge roles solely because one brush can perform both.
-
-A merge may pass only when all relevant dimensions are compatible:
-1. Shape behavior
-2. Grain behavior
-3. Edge behavior
-4. Opacity response
-5. Pressure response
-6. Wet/dry behavior
-7. Required size range
-8. Stroke rhythm
-9. Parameter-switch burden
-10. Workflow speed
-11. Output quality
-12. Material-specific behavior
-
-Possible results:
-- `MERGE_PASS`
-- `KEEP_SEPARATE`
-- `MERGE_BLOCKED_PENDING_VALIDATION`
-
-If merging causes frequent size/opacity/wetness switching, loss of material fidelity, slower work, or weaker control, keep roles separate.
-
-## 11. Dynamic quantity and undercoverage rules
-
-Never preset a final brush count, minimum target, or fixed family size.
-
-However, V2 introduces complexity sanity bands as QA diagnostics, not quantity targets:
-- minimal icon / simple spot art: typically 2–5 roles
-- simple single-character illustration: typically 5–8 roles
-- complete single-character illustration: typically 7–12 roles
-- multi-character / multi-material illustration: typically 8–16 roles
-- multi-character + fur + clothing + texture: typically 10–18 roles
-- complete scene illustration: typically 12–24+ roles
-
-For a normal complete illustration, **fewer than 8 final brush roles automatically triggers `UNDERCOVERAGE_REVIEW_REQUIRED` unless the artwork is explicitly simple/minimal and the system can demonstrate full coverage.** This is a review trigger, not a forced minimum count.
-
-Also trigger undercoverage review if any of these occur:
-- a required production stage has no mapped role;
-- a visible material has no role;
-- a single brush is asked to cover more than four materially different production roles;
-- one brush spans both large-area base fill and precision linework without evidence that workflow cost is acceptable;
-- one brush spans wet-media and dry-media behavior without a proven equivalent workflow;
-- fur/hair and smooth fabric/decorative line are merged without a specialization justification;
-- complex multi-subject or scene work returns an unusually small set.
-
-Quantity states:
-- `PROVISIONAL_COUNT`
-- `FINAL_COUNT`
-- `QUANTITY_DECISION_BLOCKED`
-
-`FINAL_COUNT` is allowed only after Stage Coverage, Material Coverage, Candidate Validation, Specialization, Merge, Redundancy, Undercoverage, and Complexity Sanity all pass.
-
-## 12. Native build strategy
-
-Prefer in this order:
-1. `KEEP` an existing validated native brush unchanged when it fully covers the role.
-2. `ADJUST` an existing native brush only when parameter changes are justified and technically writable.
-3. `DERIVE` from a validated native base when a related specialized variant is justified.
-4. `NEW` only when no suitable base exists and the runtime can produce a structurally valid native brush.
-
-Do not fake native files by renaming extensions or packaging arbitrary data.
-
-## 13. Mode B — Procreate hard delivery contract
-
-A Procreate task is **not complete** unless the final ZIP contains all of the following:
-1. **Every final delivered native `.brush` file** — one file per delivered brush role where individual brushes are part of the output.
-2. **One native `.brushset`** containing the full final delivered brush family.
-3. **One project-specific XLSX** named `[项目名]｜Procreate 新笔刷绘画操作流程.xlsx`.
-
-The XLSX must be based on the manifest-registered V2 template and must map every `REQUIRED` production stage to a real delivered brush name.
-
-Forbidden completion states:
-- ZIP contains XLSX but no `.brush`;
-- ZIP contains individual `.brush` but no `.brushset`;
-- ZIP references brush names that were not actually delivered;
-- `.brushset` exists but does not contain the final brush family;
-- placeholder brush names;
-- renamed fake native files.
-
-If native output cannot be generated or structurally validated, set:
-- `NATIVE_OUTPUT_BLOCKED`
-- `NATIVE_BUILD_FAILED`
-- `NATIVE_VALIDATION_NOT_RUN`
-
-Do **not** report `PACKAGE PASS` in those states.
-
-## 14. Native Delivery Gate
-
-Before packaging Mode B, check:
-- all final brush names exist as native `.brush` outputs when required;
-- `.brushset` exists;
-- `.brushset` contains all final delivered brushes;
-- XLSX exists;
-- XLSX references only delivered brush names;
-- file extensions correspond to real native structures;
-- no required role is missing.
-
-`PACKAGE PASS` requires all items above.
-
-`FULL PASS` additionally requires real Procreate import/drawing validation or an equivalent validated native workflow. Do not claim import success if it was not actually run.
-
-## 15. Mode A / AB
-
-Mode A uses the same V2 coverage logic and replaces the native delivery branch with Photoshop `.abr` validation.
-
-Mode AB shares:
-- Artist Profile
-- Style / Color / Material DNA
-- Production Stage Decomposition
-- Object / Material Map
-- Brush Role Inventory
-
-Then it splits into Procreate and Photoshop native mappings. Do not independently redefine the artistic process for each software.
-
-## 16. XLSX requirements
-
-The workbook must include, at minimum:
-- project production steps;
-- stage status (`REQUIRED / OPTIONAL / NOT_APPLICABLE`);
-- object/material;
-- Brush Role;
-- real delivered brush name;
-- operation instructions;
-- completion standard;
-- coverage/candidate/evidence sheet;
-- quantity/native QA sheet.
-
-All untested settings must be labeled `PROPOSED`.
-
-## 17. Fail-safe behavior
-
-If GitHub knowledge cannot be read:
-- mark `KB_UNAVAILABLE`, `KB_INCOMPLETE`, or `KB_READ_FAILED`;
-- identify the exact missing path;
-- do not invent missing repository facts.
-
-If a relevant native candidate is unavailable and could change the set:
-- mark it `PENDING_VALIDATION`;
-- use `PROVISIONAL_COUNT` or `QUANTITY_DECISION_BLOCKED`.
-
-If the V2 XLSX template is unavailable:
-- mark `DELIVERY_TEMPLATE_MISSING`;
-- do not claim a complete Mode B package.
-
-## 18. Completion gates
-
-A V2 run reaches `FINAL_COUNT` only when:
-- G1 Process Stage Coverage = PASS
-- G2 Material Coverage = PASS
-- G3 Object-specific Coverage = PASS
-- G4 Candidate Validation = PASS
-- G5 Specialization Review = PASS
-- G6 Merge Eligibility = PASS
-- G7 Redundancy Check = PASS
-- G8 Undercoverage Review = PASS
-- G9 Complexity Sanity = PASS
-
-Mode B `PACKAGE PASS` additionally requires:
-- G10 Native Delivery Gate = PASS
-- actual `.brush` files present
-- actual `.brushset` present
-- project XLSX present
-
-The correct optimization target is **Minimal Complete Production Set**, not “minimum number of brushes”.
+Do not load brush binaries, process videos, or the XLSX template during BOOT.
+
+## 4. Artwork and process routing
+Priority:
+`CURRENT_ARTWORK > SELECTED_PROCESS_DNA > ARTIST_PROFILE`.
+
+Choose `cartoon`, `vintage`, `mixed`, or `unknown` from current artwork evidence. Load only the selected Process DNA.  
+Use `PROCESS-REGISTRY.json` process media only when artwork evidence is insufficient, conflicts with Process DNA, or a specific real workflow step must be confirmed.
+
+## 5. Brush candidate retrieval
+After required Brush Roles exist:
+1. Read `BRUSH-REGISTRY.json` for discovery.
+2. Read `BRUSH-CAPABILITY-REGISTRY.json` for reusable native evidence.
+3. Shortlist at most the Manifest-defined candidate limit per Role.
+4. Prefer verified capability records and individual `.brush` files before large LFS `.brushset` assets.
+5. Resolve/inspect only shortlisted native files.
+
+Filename, `purpose_hint`, folder name, or declared set count are discovery hints only.
+
+## 6. Native evidence and classification
+Use evidence states from the Runtime Contract.  
+A candidate that has not been sufficiently inspected remains `PENDING_VALIDATION`; lack of access is not evidence for `NEW`.
+
+Decide `KEEP / ADJUST / DERIVE / NEW` only after shortlist validation.
+
+## 7. Specialization, Merge, and undercoverage
+Run specialization before Merge.  
+Apply `knowledge/MERGE-GATE.md`; technical ability to paint two tasks is not sufficient merge evidence.
+
+Every REQUIRED Brush Role must map to:
+- an independent Native Brush; or
+- an explicit `MERGE_PASS` pointing to a shared Native Brush.
+
+Always produce `ROLE_TO_NATIVE_MATRIX`. A large Role-to-brush compression requires explicit merge evidence for every collapsed Role. Missing merge evidence triggers `UNDERCOVERAGE_REVIEW_REQUIRED`.
+
+Complexity bands are QA triggers, never fixed quantity targets.
+
+## 8. Native runtime
+For Mode B use only `runtime/native_runtime.py` for Procreate structural inspection/build/package validation when execution is available.
+
+Git LFS pointer text is not native brush data. Resolve LFS only for shortlisted candidates that materially affect the decision.
+
+Do not fake `.brush`, `.brushset`, or `.abr` by renaming arbitrary files.
+
+## 9. Build order
+Do not build the XLSX before native Brush Roles are resolved.
+
+Required order:
+1. Final/Provisional Role Set
+2. Native `.brush` outputs
+3. Complete `.brushset`
+4. Load canonical XLSX template
+5. Generate project XLSX using actual delivered native brush names
+6. Reopen native family + ZIP and run delivery QA
+
+## 10. Mode boundaries
+Mode B: repository contains Procreate assets, V2 template, and native runtime.
+
+Mode A / AB: this repository currently does not contain an equivalent Photoshop `.abr` native runtime/template/asset branch.  
+If a native Photoshop delivery is requested and no external runtime dependency has been explicitly supplied by the Manifest, return `PHOTOSHOP_NATIVE_RUNTIME_UNAVAILABLE`. Never fabricate `.abr` delivery.
+
+## 11. Acceptance
+Do not duplicate acceptance rules here. Use `knowledge/RUNTIME-CONTRACT.md` as the single Acceptance/Gate Source.
+
+If a routed file or capability is unavailable, return the exact Contract status instead of natural-language PASS guessing.
