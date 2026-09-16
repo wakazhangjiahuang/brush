@@ -83,6 +83,12 @@
       ],
       "unknown": []
     },
+    "profile_conditional": {
+      "paths": [
+        "knowledge/ARTIST-PROFILE.json"
+      ],
+      "load_when": "Only after current artwork and selected Process DNA when a persistent workflow baseline is still needed."
+    },
     "process_evidence_conditional": [
       "knowledge/PROCESS-REGISTRY.json"
     ],
