@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
 """
-$brush-creator-studio V2.0.0 compatible native runtime.
+$brush-creator-studio V2.0.0 compatible Procreate native runtime.
 
-Repository runtime capability (not a Skill version upgrade):
-- Procreate .brush / .brushset structural inspection
-- Git LFS pointer detection and best-effort local resolution
-- evidence-safe KEEP / ADJUST / DERIVE from validated native bases
-- .brushset assembly
-- native family validation
-- final delivery ZIP validation against:
-  Expected Native Brush Set
-  = Delivered .brush Set
-  = Brushset Member Set
-  = XLSX Referenced Brush Set
+This module provides evidence-safe structural inspection/build/package validation for
+`.brush` / `.brushset` files. It deliberately distinguishes package-local resources
+from Procreate/system preset identifiers: a bare preset/image name that is not
+packaged is recorded as an external/system reference, not automatically treated as
+package corruption.
 
 Structural PACKAGE_PASS is not a real Procreate import/drawing test.
 FULL_PASS requires target-software validation outside this module.
@@ -25,20 +19,19 @@ import hashlib
 import json
 import os
 import plistlib
-import re
 import shutil
 import subprocess
 import tempfile
 import uuid
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Dict, Iterable, Optional, Sequence, Set, Tuple, Union
 
 PathLike = Union[str, os.PathLike]
 
 LFS_HEADER = b"version https://git-lfs.github.com/spec/v1"
-LFS_OID_RE = re.compile(rb"oid sha256:([0-9a-f]{64})")
-LFS_SIZE_RE = re.compile(rb"size ([0-9]+)")
+LFS_OID_PREFIX = b"oid sha256:"
+LFS_SIZE_PREFIX = b"size "
 REQUIRED_BRUSH_MEMBER = "Brush.archive"
 
 PASS_STATUSES = {"NATIVE_METADATA_PASS", "NATIVE_STRUCTURE_PASS", "PACKAGE_PASS"}
@@ -99,22 +92,18 @@ def _sha256_bytes(data: bytes) -> str:
 
 
 def _sha256_file(path: PathLike) -> str:
-    h = hashlib.sha256()
+    digest = hashlib.sha256()
     with open(path, "rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def detect_lfs_pointer(path_or_bytes: Union[PathLike, bytes, bytearray]) -> Dict[str, Any]:
     try:
         data = _read_bytes(path_or_bytes)
     except Exception as exc:
-        return _result(
-            "NATIVE_OUTPUT_BLOCKED",
-            reason_code="READ_FAILED",
-            errors=[str(exc)],
-        )
+        return _result("NATIVE_OUTPUT_BLOCKED", reason_code="READ_FAILED", errors=[str(exc)])
 
     head = data[:1024]
     if not head.startswith(LFS_HEADER):
@@ -126,16 +115,27 @@ def detect_lfs_pointer(path_or_bytes: Union[PathLike, bytes, bytearray]) -> Dict
             is_lfs_pointer=False,
         )
 
-    oid = LFS_OID_RE.search(head)
-    size = LFS_SIZE_RE.search(head)
+    oid = None
+    size = None
+    for line in head.splitlines():
+        if line.startswith(LFS_OID_PREFIX):
+            candidate = line[len(LFS_OID_PREFIX):].strip().decode("ascii", errors="ignore")
+            if len(candidate) == 64:
+                oid = candidate
+        elif line.startswith(LFS_SIZE_PREFIX):
+            try:
+                size = int(line[len(LFS_SIZE_PREFIX):].strip())
+            except ValueError:
+                pass
+
     return _result(
         "LFS_POINTER",
         reason_code="GIT_LFS_POINTER_DETECTED",
         evidence_state="VERIFIED_METADATA",
         sha256=_sha256_bytes(data),
         is_lfs_pointer=True,
-        lfs_oid_sha256=oid.group(1).decode() if oid else None,
-        lfs_size=int(size.group(1)) if size else None,
+        lfs_oid_sha256=oid,
+        lfs_size=size,
     )
 
 
@@ -181,16 +181,16 @@ def _metadata_subset(root: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _looks_like_resource_path(value: str) -> bool:
+def _looks_like_resource_name(value: str) -> bool:
     stripped = value.strip()
     if not stripped or len(stripped) > 512:
         return False
-    suffix = Path(stripped).suffix.lower()
+    suffix = Path(stripped.replace("\\", "/")).suffix.lower()
     return "/" in stripped or "\\" in stripped or suffix in RESOURCE_EXTENSIONS
 
 
-def _collect_explicit_resource_refs(objects: list, root: Dict[str, Any]) -> Set[str]:
-    """Conservatively audit explicit Shape/Grain/Texture file references."""
+def _collect_resource_refs(objects: list, root: Dict[str, Any]) -> Set[str]:
+    """Collect filename/path-like Shape/Grain/Texture references from Brush.archive."""
     refs: Set[str] = set()
     seen_uids: Set[int] = set()
     seen_obj_ids: Set[int] = set()
@@ -203,10 +203,10 @@ def _collect_explicit_resource_refs(objects: list, root: Dict[str, Any]) -> Set[
             walk(objects[value.data], key_hint)
             return
         if isinstance(value, dict):
-            obj_id = id(value)
-            if obj_id in seen_obj_ids:
+            object_id = id(value)
+            if object_id in seen_obj_ids:
                 return
-            seen_obj_ids.add(obj_id)
+            seen_obj_ids.add(object_id)
             for key, child in value.items():
                 walk(child, str(key))
             return
@@ -216,20 +216,62 @@ def _collect_explicit_resource_refs(objects: list, root: Dict[str, Any]) -> Set[
             return
         if isinstance(value, str):
             hint = key_hint.lower()
-            if any(word in hint for word in RESOURCE_KEYWORDS) and _looks_like_resource_path(value):
+            if any(word in hint for word in RESOURCE_KEYWORDS) and _looks_like_resource_name(value):
                 refs.add(value.replace("\\", "/"))
 
     walk(root)
     return refs
 
 
+def _normalized_zip_names(zip_names: Iterable[str]) -> Set[str]:
+    return {name.lstrip("./") for name in zip_names if name and not name.endswith("/")}
+
+
 def _match_resource_ref(ref: str, zip_names: Sequence[str]) -> bool:
     normalized = ref.lstrip("./")
-    names = {name.lstrip("./") for name in zip_names}
+    names = _normalized_zip_names(zip_names)
     if normalized in names:
         return True
-    ref_name = Path(normalized).name
-    return any(Path(name).name == ref_name for name in names)
+    basename = Path(normalized).name
+    return any(Path(name).name == basename for name in names)
+
+
+def _is_explicit_package_local_ref(ref: str) -> bool:
+    """
+    Only path-qualified references are hard package-local requirements.
+
+    Procreate Brush.archive commonly stores bare names such as Brush-Preset-*.png,
+    Brush-Artery-*.jpg, Brush-Pocket-*.png, Gouache-Wash.jpg, Acrylic-Square.jpg,
+    etc. Those may identify Procreate/system/library resources and are not proof that
+    the file must be embedded in the .brush ZIP. Bare names are therefore reported as
+    external/system references unless the matching file is actually present.
+    """
+    raw = ref.strip().replace("\\", "/")
+    return raw.startswith("./") or raw.startswith("../") or "/" in raw
+
+
+def _classify_resource_refs(refs: Sequence[str], zip_names: Sequence[str]) -> Dict[str, Any]:
+    embedded = []
+    package_local = []
+    external_or_system = []
+    missing_package_local = []
+
+    for ref in sorted(set(refs)):
+        if _match_resource_ref(ref, zip_names):
+            embedded.append(ref)
+            continue
+        if _is_explicit_package_local_ref(ref):
+            package_local.append(ref)
+            missing_package_local.append(ref)
+        else:
+            external_or_system.append(ref)
+
+    return {
+        "embedded_resource_refs": embedded,
+        "explicit_package_local_resource_refs": package_local,
+        "external_or_system_resource_refs": external_or_system,
+        "missing_package_local_resource_refs": missing_package_local,
+    }
 
 
 def inspect_brush(file: PathLike) -> Dict[str, Any]:
@@ -258,7 +300,7 @@ def inspect_brush(file: PathLike) -> Dict[str, Any]:
 
     try:
         with zipfile.ZipFile(path) as archive_zip:
-            names = [n for n in archive_zip.namelist() if not n.endswith("/")]
+            names = [name for name in archive_zip.namelist() if not name.endswith("/")]
             if REQUIRED_BRUSH_MEMBER not in names:
                 return _result(
                     "NATIVE_OUTPUT_BLOCKED",
@@ -283,20 +325,31 @@ def inspect_brush(file: PathLike) -> Dict[str, Any]:
                     zip_members=names,
                 )
 
-            explicit_refs = sorted(_collect_explicit_resource_refs(objects, root))
-            missing_refs = sorted(ref for ref in explicit_refs if not _match_resource_ref(ref, names))
-            if missing_refs:
+            refs = sorted(_collect_resource_refs(objects, root))
+            ref_state = _classify_resource_refs(refs, names)
+            missing_local = ref_state["missing_package_local_resource_refs"]
+
+            if missing_local:
                 return _result(
                     "NATIVE_OUTPUT_BLOCKED",
-                    reason_code="MISSING_REFERENCED_NATIVE_RESOURCE",
+                    reason_code="MISSING_PACKAGE_LOCAL_NATIVE_RESOURCE",
                     internal_name=internal_name,
                     sha256=_sha256_file(path),
-                    missing_members=missing_refs,
-                    errors=["One or more explicit Shape/Grain/Texture resource references are missing"],
+                    missing_members=missing_local,
+                    errors=["One or more explicit package-local Shape/Grain/Texture references are missing"],
                     metadata=metadata,
-                    explicit_resource_refs=explicit_refs,
+                    resource_refs=refs,
+                    **ref_state,
                     zip_members=names,
                 )
+
+            external_refs = ref_state["external_or_system_resource_refs"]
+            if external_refs:
+                resource_check = "EXTERNAL_OR_SYSTEM_REFS_RECORDED"
+            elif ref_state["embedded_resource_refs"]:
+                resource_check = "EMBEDDED_REFS_RESOLVED"
+            else:
+                resource_check = "NO_FILE_REFS_FOUND"
 
             return _result(
                 "NATIVE_STRUCTURE_PASS",
@@ -306,8 +359,10 @@ def inspect_brush(file: PathLike) -> Dict[str, Any]:
                 sha256=_sha256_file(path),
                 member_count=1,
                 metadata=metadata,
-                explicit_resource_refs=explicit_refs,
-                resource_reference_check="EXPLICIT_REFS_RESOLVED" if explicit_refs else "NO_EXPLICIT_FILE_REFS_FOUND",
+                resource_refs=refs,
+                resource_reference_check=resource_check,
+                external_resource_validation="NOT_TARGET_SOFTWARE_VALIDATED" if external_refs else "NOT_REQUIRED",
+                **ref_state,
                 zip_members=names,
                 structural_validation="PACKAGE_STRUCTURE_ONLY",
             )
@@ -373,8 +428,9 @@ def inspect_brushset(file: PathLike) -> Dict[str, Any]:
                 if name.count("/") == 1 and name.endswith("/Brush.archive")
             }
             declared = [str(member) for member in order]
+            declared_set = set(declared)
             missing = sorted(member for member in declared if member not in archive_dirs)
-            extra = sorted(member for member in archive_dirs if member not in set(declared))
+            extra = sorted(member for member in archive_dirs if member not in declared_set)
 
             members = []
             for member_id in declared:
@@ -437,12 +493,16 @@ def resolve_lfs_asset(source: PathLike) -> Dict[str, Any]:
     try:
         root = subprocess.run(
             ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, check=True,
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()
-        rel = os.path.relpath(path.resolve(), Path(root).resolve())
+        relative = os.path.relpath(path.resolve(), Path(root).resolve())
         subprocess.run(
-            ["git", "-C", root, "lfs", "pull", "--include", rel, "--exclude", ""],
-            capture_output=True, text=True, check=True,
+            ["git", "-C", root, "lfs", "pull", "--include", relative, "--exclude", ""],
+            capture_output=True,
+            text=True,
+            check=True,
         )
         after = detect_lfs_pointer(path)
         if after.get("status") == "LFS_POINTER":
@@ -504,7 +564,11 @@ def derive_or_build_brush(base: PathLike, spec: Dict[str, Any], output: PathLike
         return checked
 
     if operation not in {"ADJUST", "DERIVE", "NEW"}:
-        return _result("NATIVE_BUILD_BLOCKED", reason_code="UNSUPPORTED_BUILD_OPERATION", errors=[f"Unsupported operation: {operation}"])
+        return _result(
+            "NATIVE_BUILD_BLOCKED",
+            reason_code="UNSUPPORTED_BUILD_OPERATION",
+            errors=[f"Unsupported operation: {operation}"],
+        )
 
     if operation == "NEW" and not spec.get("allow_new_from_validated_base"):
         return _result(
@@ -520,11 +584,19 @@ def derive_or_build_brush(base: PathLike, spec: Dict[str, Any], output: PathLike
         patch = spec.get("metadata_patch") or {}
         unknown = sorted(set(patch) - SAFE_ARCHIVE_PATCH_FIELDS)
         if unknown:
-            return _result("NATIVE_BUILD_BLOCKED", reason_code="UNSAFE_ARCHIVE_PATCH_FIELD", errors=[f"Unsafe/unrecognized Brush.archive patch fields: {unknown}"])
+            return _result(
+                "NATIVE_BUILD_BLOCKED",
+                reason_code="UNSAFE_ARCHIVE_PATCH_FIELD",
+                errors=[f"Unsafe/unrecognized Brush.archive patch fields: {unknown}"],
+            )
 
         for key, value in patch.items():
             if not isinstance(value, (int, float, bool, str)):
-                return _result("NATIVE_BUILD_BLOCKED", reason_code="NON_SCALAR_ARCHIVE_PATCH_VALUE", errors=[f"Non-scalar patch value for {key}"])
+                return _result(
+                    "NATIVE_BUILD_BLOCKED",
+                    reason_code="NON_SCALAR_ARCHIVE_PATCH_VALUE",
+                    errors=[f"Non-scalar patch value for {key}"],
+                )
             root[key] = value
 
         name = spec.get("internal_name")
@@ -535,7 +607,11 @@ def derive_or_build_brush(base: PathLike, spec: Dict[str, Any], output: PathLike
             elif isinstance(name_ref, str):
                 root["name"] = str(name)
             else:
-                return _result("NATIVE_BUILD_BLOCKED", reason_code="INTERNAL_NAME_PATCH_UNSUPPORTED", errors=["Could not safely update internal brush name"])
+                return _result(
+                    "NATIVE_BUILD_BLOCKED",
+                    reason_code="INTERNAL_NAME_PATCH_UNSUPPORTED",
+                    errors=["Could not safely update internal brush name"],
+                )
 
         rebuilt = plistlib.dumps(payload, fmt=plistlib.FMT_BINARY, sort_keys=False)
         _rewrite_zip_member(base_path, output_path, REQUIRED_BRUSH_MEMBER, rebuilt)
@@ -551,7 +627,11 @@ def _unique_member_id() -> str:
     return str(uuid.uuid4()).upper()
 
 
-def build_brushset(brush_files: Sequence[PathLike], output: PathLike, set_name: str = "Brush Creator Studio") -> Dict[str, Any]:
+def build_brushset(
+    brush_files: Sequence[PathLike],
+    output: PathLike,
+    set_name: str = "Brush Creator Studio",
+) -> Dict[str, Any]:
     if not brush_files:
         return _result("NATIVE_BUILD_FAILED", reason_code="NO_BRUSH_FILES", errors=["No brush files supplied"])
 
@@ -571,7 +651,10 @@ def build_brushset(brush_files: Sequence[PathLike], output: PathLike, set_name: 
 
     try:
         with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as out_zip:
-            out_zip.writestr("brushset.plist", plistlib.dumps({"brushes": member_ids, "name": set_name}, fmt=plistlib.FMT_XML))
+            out_zip.writestr(
+                "brushset.plist",
+                plistlib.dumps({"brushes": member_ids, "name": set_name}, fmt=plistlib.FMT_XML),
+            )
             for brush, member_id in zip(brush_files, member_ids):
                 with zipfile.ZipFile(brush) as src:
                     for info in src.infolist():
@@ -647,7 +730,11 @@ def _normalized_name_set(values: Sequence[str], label: str) -> Tuple[Optional[Se
     return set(cleaned), None
 
 
-def validate_delivery_zip(zip_path: PathLike, expected_native_brush_names: Sequence[str], xlsx_reference_names: Sequence[str]) -> Dict[str, Any]:
+def validate_delivery_zip(
+    zip_path: PathLike,
+    expected_native_brush_names: Sequence[str],
+    xlsx_reference_names: Sequence[str],
+) -> Dict[str, Any]:
     """Mandatory four-way set validation for Mode B delivery."""
     path = Path(zip_path)
     if not path.exists() or not zipfile.is_zipfile(path):
@@ -720,7 +807,7 @@ def validate_delivery_zip(zip_path: PathLike, expected_native_brush_names: Seque
             if family.get("status") != "NATIVE_STRUCTURE_PASS":
                 errors.extend(family.get("errors", []))
                 reason_code = reason_code or "NATIVE_FAMILY_SET_MISMATCH"
-            brushset_set = set(name for name in family.get("brushset_names", []) if name)
+            brushset_set = {name for name in family.get("brushset_names", []) if name}
 
         set_map = {
             "expected_native": sorted(expected_set),
@@ -731,7 +818,9 @@ def validate_delivery_zip(zip_path: PathLike, expected_native_brush_names: Seque
         set_consistent = expected_set == delivered_set == brushset_set == refs_set
 
         if not set_consistent:
-            errors.append("Expected Native Brush Set, Delivered .brush Set, Brushset Member Set, and XLSX Referenced Brush Set are not exactly equal")
+            errors.append(
+                "Expected Native Brush Set, Delivered .brush Set, Brushset Member Set, and XLSX Referenced Brush Set are not exactly equal"
+            )
             reason_code = reason_code or "DELIVERY_SET_MISMATCH"
 
         return _result(
